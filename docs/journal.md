@@ -290,3 +290,14 @@ a failure (D1, and the 12:20 analysis) leaned on exact fidelity, the metric alre
 D1 stands as "stop fine-tuning it" (the variety trend), not as "it failed". The decision now belongs to
 the blind comparison: attempt 2's 1,227-concept picker generation launched (guidance 3, as the small
 model's picker), ~45 min, in parallel with arms 3 and 4.
+
+**D9. Arm 3 result: a better text encoder makes the small model more faithful and more typical** (13:12).
+Guidance 1.5 (guidance 3 in brackets): semantic hit@20 0.080 (0.085) against chance 0.005; exact
+dictionary character 45/96 (52/96), median target rank 2 (1); within-prompt similarity 0.529 (0.601) on
+dictionary words and 0.463 (0.539) on invented words, both worse than the small model's 0.443 / 0.417;
+7/96 (12/96) samples of dictionary words above the near-copy line, which for these words are the
+dictionary character itself. Reading: stronger conditioning narrows the outputs. The small model's
+typicality was not caused by a weak text encoder; SD attempt 2 remains the most varied of the three
+(0.405 / 0.348), which points at its visual pretraining as the source of variety. One-change arm, so the
+attribution holds within this setup (one seed of training).
+Practical: attempt 2's picker generation is slow while sharing the GPU (208/1,227 after 20 min).
