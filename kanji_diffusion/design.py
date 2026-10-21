@@ -23,6 +23,7 @@ from .evaluate import masks, similarity
 from .sample import _font, generate, load_run
 
 HERE = Path(__file__).parent
+COPY_AT = 0.783  # 99th percentile of nearest-other similarity between distinct real kanji (evaluate.py)
 
 
 def parts_of(design: str) -> list[str]:
@@ -46,25 +47,43 @@ def main() -> None:
     real_m = masks(real)
     designs = {k: v for k, v in json.loads(args.designs.read_text(encoding="utf-8")).items() if not k.startswith("_")}
 
-    def has_parts(parts):
-        return np.array([all(re.search(r"\b" + re.escape(p.lower()) + r"\b", c) for p in parts) for c in comp])
+    def has_part(part):
+        return np.array([bool(re.search(r"\b" + re.escape(part.lower()) + r"\b", c)) for c in comp])
+
+    def part_hit(top_rows, parts):
+        # Mean over a design's parts of the share of the 20 nearest training glyphs that contain that part:
+        # requiring every part in one neighbour scored near zero, since such neighbours rarely exist.
+        return float(np.mean([has_part(p)[top_rows].mean() for p in parts]))
 
     rows, report, cells = [], {}, []
     for word, ((da, why_a), (db, why_b)) in designs.items():
         prompts = [word, f"{word}, made of {da}", f"{word}, made of {db}"]
         g = generate(unet, vae, prompts, n=args.n, text_model=cfg["text_model"], guidance=args.guidance, device=device)
-        top = torch.topk(similarity(masks(g), real_m), 20, dim=1).indices.numpy()
-        pa, pb = has_parts(parts_of(da)), has_parts(parts_of(db))
-        hit = lambda k0, mask: float(np.mean([mask[top[k]].mean() for k in range(k0 * args.n, (k0 + 1) * args.n)]))
+        sim = similarity(masks(g), real_m)
+        top = torch.topk(sim, 20, dim=1).indices.numpy()
+        best = sim.max(dim=1).values.numpy()
+        pa, pb = parts_of(da), parts_of(db)
+        hit = lambda k0, parts: part_hit(top[k0 * args.n:(k0 + 1) * args.n].ravel(), parts)
+        own = similarity(masks(g), masks(g)).numpy()
+        var = lambda k0: float(np.mean([own[k0 * args.n + a, k0 * args.n + b]
+                                        for a in range(args.n) for b in range(a + 1, args.n)]))
         r = {"A": da, "B": db, "A_hit_A": hit(1, pa), "A_hit_B": hit(1, pb), "B_hit_B": hit(2, pb), "B_hit_A": hit(2, pa),
-             "plain_hit_A": hit(0, pa), "plain_hit_B": hit(0, pb), "base_rate_A": float(pa.mean()), "base_rate_B": float(pb.mean())}
+             "plain_hit_A": hit(0, pa), "plain_hit_B": hit(0, pb), "near_copies": int((best > COPY_AT).sum()),
+             "within_A": var(1), "within_B": var(2), "within_plain": var(0)}
         report[word] = {k: (round(v, 4) if isinstance(v, float) else v) for k, v in r.items()}
         print(f"{word:15s} A[{da}] own {r['A_hit_A']:.3f} vs {r['A_hit_B']:.3f} | "
               f"B[{db}] own {r['B_hit_B']:.3f} vs {r['B_hit_A']:.3f}", flush=True)
         cells.append((word, da, db, g))
     wins = sum((v["A_hit_A"] > v["A_hit_B"]) + (v["B_hit_B"] > v["B_hit_A"]) for v in report.values())
-    print(f"design decides the glyph in {wins} of {2 * len(report)} designs (own parts above the other design's)")
-    report["_summary"] = {"wins": int(wins), "of": 2 * len(designs)}
+    vals = list(report.values())
+    own_m = np.mean([(v["A_hit_A"] + v["B_hit_B"]) / 2 for v in vals])
+    other_m = np.mean([(v["A_hit_B"] + v["B_hit_A"]) / 2 for v in vals])
+    copies = sum(v["near_copies"] for v in vals)
+    within = np.mean([(v["within_A"] + v["within_B"]) / 2 for v in vals])
+    print(f"design decides the glyph in {wins} of {2 * len(designs)} designs; part hit own {own_m:.3f} vs other "
+          f"{other_m:.3f}; near-copies {copies}/{3 * args.n * len(designs)}; within-design similarity {within:.3f}")
+    report["_summary"] = {"wins": int(wins), "of": 2 * len(designs), "own": round(float(own_m), 4),
+                          "other": round(float(other_m), 4), "near_copies": int(copies), "within": round(float(within), 4)}
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "design_report.json").write_text(json.dumps(report, ensure_ascii=False, indent=1), encoding="utf-8")
 
