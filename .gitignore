@@ -1,8 +1,7 @@
 __pycache__/
-src/model/cache/
-.cursorrules
 *.py[cod]
 .venv/
-.env
 data/
+runs/
+outputs/
 *.log
