@@ -320,3 +320,29 @@ nearly the same glyph (low variety, likely made worse by guidance 3); (2) severa
 characters (金+鳥 could be an existing rare kanji); the copy count will say. Some parts are not drawn:
 "dish (top)" came out as 艹, "say (right)" as a generic right side. Complexity so far: one flag in
 prepare, no model change; the decisive evidence was looking at the picture, which the logged metrics missed.
+
+**D11. The per-part score confirms composition, with no copies; variety is the open weakness** (13:40).
+12 words × 2 designs × 6 samples (216 glyphs per run):
+
+| | part hit, own design | part hit, other design (control) | designs won | near-copies | within-design similarity |
+|---|---|---|---|---|---|
+| arm 4, guidance 1.5 | 0.349 | 0.158 | 17/24 | 0 | 0.597 |
+| arm 4, guidance 3 | 0.349 | 0.160 | 16/24 | 0 | 0.671 |
+| arm 3 (control), guidance 1.5 | 0.101 | 0.049 | 13/24 | 0 | 0.532 |
+| arm 3 (control), guidance 3 | 0.092 | 0.042 | 12/24 | 0 | 0.624 |
+
+Arm 4's own-design score is 3.5× the control's at the same guidance, and 2.2× its score for the other
+design of the same word: the design, not the word, decides the glyph. Zero near-copies, so the designed
+characters are new. Weakness: one design gives nearly the same glyph every time (0.60–0.67, against
+0.43–0.51 for plain words). Decision: guidance 1.5 for arm 4 from now on (same composition, more variety),
+and variety is delegated to the designer, not to sampling noise: different designs for the same word
+give different, still meaningful glyphs, which is how a human inventor varies too. Why this and not
+lowering guidance further: guidance trades meaning for noise, a design change trades one meaning for
+another meaning. Cost: zero training.
+
+**D12. The blind test becomes a three-way round robin** (13:41): small model (arm 1, plain word), SD
+attempt 2 (plain word) and arm 4 with designs written by an LLM (one design per concept, four samples,
+guidance 1.5). 300 concepts drawn at random from the 1,227, each shown as one pairing of two of the
+three systems, sides shuffled; ~100 judgements per pairing, scored as win rates and a Bradley-Terry
+ranking. Why three-way in one test: the author's time is the scarce resource, and one session answers
+both questions (does pretraining help, does design help). Why 300: about 15 minutes of judging.
