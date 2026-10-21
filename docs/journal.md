@@ -165,3 +165,18 @@ oversample simple (few-stroke) characters; high lr on attn2 to_k/to_v; last CLIP
   rising, decelerating). New hits: fire gives 火 in one sample, bird has 鳥 in both. Heart gives 中
   ("middle, inside"), a neighbouring meaning of *heart*, not 心. Fidelity 0/24; within-prompt similarity
   0.394 (variety still falling).
+
+### Attempt 3 (approved 11:48, armed to start when attempt 2 ends)
+
+Starts from attempt 2's final U-Net. Changes, each against the evidence above:
+- `--t-logit-mean 0.5`: timesteps drawn logit-normally, median about t=620, so the high-noise steps where
+  the components are decided are visited more (SD3's logit-normal sampling, shifted).
+- Min-SNR weighting was planned and **dropped**: for v-prediction its weight is min(SNR, γ)/(SNR + 1),
+  which tends to zero at the highest noise, exactly the steps the diagnosis says carry the caption. The
+  plain v loss (the small model's) is kept.
+- `--simple-boost 3 --simple-strokes 6`: characters with at most 6 strokes (base characters such as 山,
+  心, 女) are drawn four times as often, against Glyffuser's radical-frequency bias.
+- `--train-text-layers 4 --lr-text 2e-6`: the last four CLIP text layers and the final layer norm are
+  unfrozen, so meanings can separate before the cross-attention.
+- Same as attempt 2: v-prediction, zero terminal SNR, lr 1e-4 on attn2 and 2e-5 elsewhere, constant.
+- 12,000 steps, checks every 1,000; a 30-step smoke test runs first in the chain and stops it if it fails.

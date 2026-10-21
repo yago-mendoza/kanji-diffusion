@@ -113,6 +113,13 @@ def main() -> None:
     ap.add_argument("--v-prediction", action="store_true", help="train on the velocity instead of the noise")
     ap.add_argument("--zero-snr", action="store_true", help="rescale the schedule to zero terminal SNR (fixes grey backgrounds)")
     ap.add_argument("--eval-data", type=Path, default=Path("data/kanji64.pt"), help="64 px set for the fidelity check")
+    ap.add_argument("--t-logit-mean", type=float, help="sample timesteps logit-normally with this mean (>0 favours high noise)")
+    ap.add_argument("--simple-boost", type=float, default=0.0,
+                    help="extra sampling weight for characters with few strokes (base characters, rare as components)")
+    ap.add_argument("--simple-strokes", type=int, default=6)
+    ap.add_argument("--kanjivg", type=Path, default=Path("data/raw/kanjivg.xml.gz"), help="stroke data, for --simple-boost")
+    ap.add_argument("--train-text-layers", type=int, default=0, help="unfreeze the last N CLIP text layers")
+    ap.add_argument("--lr-text", type=float, default=2e-6)
     args = ap.parse_args()
 
     assert torch.cuda.is_available(), "fine-tuning Stable Diffusion needs a GPU"
@@ -121,7 +128,14 @@ def main() -> None:
     torch.backends.cuda.matmul.allow_tf32 = True
 
     tokenizer = CLIPTokenizer.from_pretrained(args.model, subfolder="tokenizer")
-    text_encoder = CLIPTextModel.from_pretrained(args.model, subfolder="text_encoder").to(device, dtype).requires_grad_(False)
+    text_encoder = CLIPTextModel.from_pretrained(args.model, subfolder="text_encoder").to(device).requires_grad_(False)
+    text_params = []
+    if args.train_text_layers:
+        for m in list(text_encoder.text_model.encoder.layers[-args.train_text_layers:]) + [text_encoder.text_model.final_layer_norm]:
+            m.requires_grad_(True)
+        text_params = [p for p in text_encoder.parameters() if p.requires_grad]
+    else:
+        text_encoder.to(dtype)
     vae = AutoencoderKL.from_pretrained(args.model, subfolder="vae").to(device, dtype).requires_grad_(False)
     unet = (UNet2DConditionModel.from_pretrained(args.init_unet) if args.init_unet
             else UNet2DConditionModel.from_pretrained(args.model, subfolder="unet")).float().to(device)
@@ -150,7 +164,19 @@ def main() -> None:
     def embed(texts):
         ids = tokenizer(texts, padding="max_length", max_length=tokenizer.model_max_length, truncation=True,
                         return_tensors="pt").input_ids.to(device)
-        return text_encoder(ids)[0].float()
+        with torch.autocast("cuda", dtype=dtype):
+            return text_encoder(ids)[0].float()
+
+    # Sampling weights: base characters (few strokes) are rare as recognisable components, so the model learns
+    # their radicals before the characters themselves; --simple-boost shows them more often.
+    weights = torch.ones(len(chars))
+    if args.simple_boost:
+        from .prepare import read_strokes
+        strokes = read_strokes(args.kanjivg)
+        n_strokes = torch.tensor([len(strokes.get(c, [])) for c in chars])
+        weights += args.simple_boost * (n_strokes <= args.simple_strokes).float()
+        print(f"{int((n_strokes <= args.simple_strokes).sum())} characters with <= {args.simple_strokes} strokes, "
+              f"weight {1 + args.simple_boost}", flush=True)
 
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "arm.json").write_text(json.dumps({k: str(v) for k, v in vars(args).items()}, indent=2))
@@ -159,6 +185,8 @@ def main() -> None:
     xattn = [p for n, p in unet.named_parameters() if ".attn2." in n]
     rest = [p for n, p in unet.named_parameters() if ".attn2." not in n]
     groups = [{"params": rest, "base": args.lr}, {"params": xattn, "base": args.lr_xattn or args.lr}]
+    if text_params:
+        groups.append({"params": text_params, "base": args.lr_text})
     opt = torch.optim.AdamW(groups, lr=args.lr, weight_decay=1e-2)
     alphas = sched.alphas_cumprod.to(device)
     start = 1
@@ -166,6 +194,8 @@ def main() -> None:
     if state_path.exists():
         st = torch.load(state_path, map_location=device)
         unet.load_state_dict(st["unet"]); ema.load_state_dict(st["ema"]); opt.load_state_dict(st["opt"])
+        if "text" in st:
+            text_encoder.load_state_dict(st["text"])
         start = st["step"] + 1
         print(f"resumed at step {st['step']}", flush=True)
     fidelity = make_fidelity(args.eval_data) if args.eval_data.exists() else None
@@ -192,12 +222,16 @@ def main() -> None:
     unet.train()
     t0, running = time.time(), None
     for step in range(start, args.steps + 1):
-        idx = torch.randint(0, len(chars), (args.batch,))
+        idx = torch.multinomial(weights, args.batch, replacement=True)
         z0 = latents[idx.to(device)]
         texts = [full[i] if torch.rand(()) < 0.5 else first[i] for i in idx.tolist()]
         texts = ["" if torch.rand(()) < args.cond_drop else t for t in texts]
         cond = embed(texts)
-        t = torch.randint(0, sched.config.num_train_timesteps, (args.batch,), device=device)
+        T = sched.config.num_train_timesteps
+        if args.t_logit_mean is not None:
+            t = (torch.sigmoid(torch.randn(args.batch, device=device) + args.t_logit_mean) * (T - 1)).round().long()
+        else:
+            t = torch.randint(0, T, (args.batch,), device=device)
         noise = torch.randn_like(z0)
         if args.offset_noise:
             noise = noise + args.offset_noise * torch.randn(z0.shape[0], z0.shape[1], 1, 1, device=device)
@@ -213,28 +247,30 @@ def main() -> None:
         loss = F.mse_loss(out.float(), target)
         opt.zero_grad(set_to_none=True)
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(unet.parameters(), 1.0)
+        torch.nn.utils.clip_grad_norm_(list(unet.parameters()) + text_params, 1.0)
         opt.step()
         with torch.no_grad():
             for pe, p in zip(ema.parameters(), unet.parameters()):
                 pe.lerp_(p, 1 - min(args.ema, (1 + step) / (10 + step)))
         running = loss.item() if running is None else 0.98 * running + 0.02 * loss.item()
         if step % 25 == 0:
-            eta = (time.time() - t0) / step * (args.steps - step)
+            eta = (time.time() - t0) / (step - start + 1) * (args.steps - step)
             print(f"step {step:6d}  loss {running:.4f}  lr {opt.param_groups[0]['lr']:.2e}  eta {eta / 60:5.0f}min", flush=True)
         if step % args.save_every == 0 or step == args.steps:
             # Sample from a bf16 copy: casting the EMA itself rounded its weights at every sheet (attempt 1's bug).
             sampling_unet = copy.deepcopy(ema).to(dtype).eval()
-            sample_sheet(sampling_unet, vae, text_encoder, tokenizer, DEMO_PROMPTS, args.out / f"samples/step{step:06d}.png", size=size)
+            sampling_text = copy.deepcopy(text_encoder).to(dtype).eval()
+            sample_sheet(sampling_unet, vae, sampling_text, tokenizer, DEMO_PROMPTS, args.out / f"samples/step{step:06d}.png", size=size)
             line = f"  caption gain {100 * caption_gain(sampling_unet):.1f}%"
             if fidelity:
-                f1, var = fidelity(sampling_unet, vae, text_encoder, tokenizer, size)
+                f1, var = fidelity(sampling_unet, vae, sampling_text, tokenizer, size)
                 line += f"  fidelity {f1}/24  within-prompt {var:.3f}"
-            del sampling_unet
-            torch.save({"unet": unet.state_dict(), "ema": ema.state_dict(), "opt": opt.state_dict(), "step": step}, state_path)
+            del sampling_unet, sampling_text
+            torch.save({"unet": unet.state_dict(), "ema": ema.state_dict(), "opt": opt.state_dict(), "step": step,
+                        **({"text": text_encoder.state_dict()} if text_params else {})}, state_path)
             print(f"saved samples and state at step {step}{line}", flush=True)
 
-    pipe = StableDiffusionPipeline(vae=vae, text_encoder=text_encoder, tokenizer=tokenizer, unet=ema.to(torch.float16),
+    pipe = StableDiffusionPipeline(vae=vae, text_encoder=text_encoder.to(torch.float16), tokenizer=tokenizer, unet=ema.to(torch.float16),
                                    scheduler=sampler(),
                                    safety_checker=None, feature_extractor=None, requires_safety_checker=False)
     pipe.to(torch.float16).save_pretrained(args.out / "pipeline")
