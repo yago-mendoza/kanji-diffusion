@@ -123,3 +123,9 @@ objective (epsilon) is the main reason. Cause 2 (grey backgrounds) and cause 3 (
   0.1%, fidelity 0/24.
 - Repeat of the `pkill -f` trap from the Bits2Bricks piece: a remote `pgrep -f "run_post.sh"` matched its
   own SSH command and killed it (exit 255). Pattern with brackets (`[r]un_post`) or kill by pid.
+- 1,000 steps (11:09, `journal/sd15-attempt2/step001000.png`): **backgrounds white**, strokes thin and
+  uniform like the training renders (zero terminal SNR worked). **Semantics appear in the sheet**: water
+  gives two characters with 氵, tree two with 木 on the left, fish two with 魚; nothing like it in the
+  6,000 steps of attempt 1. Metrics lag the sheet: caption gain 0.5% (from 0.1% at step 30; the small
+  model is at 47%), fidelity 0/24 (radicals right, not yet the exact dictionary character),
+  within-prompt similarity 0.334. Decision: continue to the 2,000-step check.
