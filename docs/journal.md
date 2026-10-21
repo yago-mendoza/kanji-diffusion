@@ -301,3 +301,22 @@ typicality was not caused by a weak text encoder; SD attempt 2 remains the most 
 (0.405 / 0.348), which points at its visual pretraining as the source of variety. One-change arm, so the
 attribution holds within this setup (one seed of training).
 Practical: attempt 2's picker generation is slow while sharing the GPU (208/1,227 after 20 min).
+
+**D10. Arm 4 composes from the design; the first design metric could not see it** (13:23). Arm 4's
+evaluation on plain words barely moves against arm 3 (hit@20 0.073/0.078 against 0.080/0.085, exact
+55–57/96, within-prompt 0.486/0.573 on dictionary words, 0.428/0.512 on invented words): the third caption
+does not hurt plain prompts. The design test printed 3 of 24 for arm 4 and 1 of 24 for arm 3, but the
+sheets (`journal/arm4-components/designs_arm4_g3.png`, control `designs_arm3_control_g3.png`) say the
+opposite of a failure: asked for "pizza, made of eat (left) and pelt (right)", arm 4 draws 食 on the left
+and 皮 on the right in all six samples; 門 around 糸 for "gate (around) and thread", 金 beside 鳥 for
+"gold (left) and bird (right)", 雨 over 灬 for "rain (top) and fire (bottom)", 亻 for person, 扌 for hand,
+車 for car. Arm 3, which never saw "made of" captions, draws unrelated glyphs for the same prompts.
+Why the metric read zero: it required one training neighbour to contain every part of the design, and
+for an invented combination such a neighbour almost never exists (that is what makes it invented).
+Replaced with a per-part score (for each part, the share of the 20 nearest glyphs containing it, averaged),
+plus a near-copy count and within-design variety, rerun at guidance 1.5 and 3.
+Two weaknesses visible already, recorded before the numbers: (1) the six samples of one design are
+nearly the same glyph (low variety, likely made worse by guidance 3); (2) several outputs may be real
+characters (金+鳥 could be an existing rare kanji); the copy count will say. Some parts are not drawn:
+"dish (top)" came out as 艹, "say (right)" as a generic right side. Complexity so far: one flag in
+prepare, no model change; the decisive evidence was looking at the picture, which the logged metrics missed.
