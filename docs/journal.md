@@ -366,3 +366,15 @@ about $9.6 of compute. Why stop now: every next GPU step (more designs per conce
 hanzi data) depends on the verdict, and an idle A100 costs more per hour than any of those steps.
 Risk accepted: on restart the GPU on that host may be taken; the volume can then be reached with a
 zero-GPU start, and every result needed is already on the laptop.
+
+**D15. The blind test was stopped after 7 judgements; the author found all three systems bad** ("me
+parecen todos una mierda"). Votes read from the artifact's db: SD attempt 2 won 3 of its 4 pairings, the
+small model 4 of 5, the design arm lost all 4 (to the small model three times, to SD once). Seven votes
+decide nothing statistically, but two facts survive: no system clears the author's bar, and the arm every
+metric of mine preferred (D10, D11) is the one he picked against every time. Third time a metric of mine
+and the author's eye disagree (D8, D10). Reading: the metrics reward legibility and faithfulness to a
+recipe, which is what makes a glyph look like a dictionary entry; his preference so far goes to the
+stranger, more varied outputs. Decision: no further GPU work until the failure is named by the author
+(what *bad* is: illegible, too typical, ugly strokes, low resolution), because optimising a fourth proxy
+without it repeats the same mistake. Complexity of the decision: none; cost of skipping it: another
+A100 session spent on the wrong target.
