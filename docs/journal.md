@@ -270,3 +270,23 @@ same glyph, the model ignores the design. Why in-vocabulary: a design the model 
 training glyphs whose component caption contains every part of that design, against the same share for
 the other design of the same word. The other design is the control. Arm 3 (no component captions) is the
 control for arm 4. Chained on the pod to run when both arms finish.
+
+**D8. Correction: by the goal's own metrics, attempt 2 beats the small model** (12:51). Same evaluation,
+8 samples per word:
+
+| | small model | SD attempt 2 |
+|---|---|---|
+| semantic hit@20 (chance), guidance 1.5 | 0.065 (0.005), 13× | 0.076 (0.003), 25× |
+| semantic hit@20 (chance), guidance 3 | | 0.080 (0.003) |
+| within-prompt similarity, dictionary words (lower = more varied) | 0.443 | 0.405 |
+| within-prompt similarity, invented words | 0.417 | 0.348 |
+| near-copies | 0 | 0 |
+| exact dictionary character | 39/96 | 0/96 (median rank 6,040) |
+| caption gain at t=800 (its own schedule) | | 7.9% (attempt 1: 0.0%) |
+
+SD attempt 2 draws components of the right family more often over chance and is more varied; it never
+reproduces the dictionary character, which is the one thing the goal does not ask for. Calling attempt 2
+a failure (D1, and the 12:20 analysis) leaned on exact fidelity, the metric already judged misaligned.
+D1 stands as "stop fine-tuning it" (the variety trend), not as "it failed". The decision now belongs to
+the blind comparison: attempt 2's 1,227-concept picker generation launched (guidance 3, as the small
+model's picker), ~45 min, in parallel with arms 3 and 4.
