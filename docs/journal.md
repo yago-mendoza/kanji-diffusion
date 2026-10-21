@@ -346,3 +346,13 @@ guidance 1.5). 300 concepts drawn at random from the 1,227, each shown as one pa
 three systems, sides shuffled; ~100 judgements per pairing, scored as win rates and a Bradley-Terry
 ranking. Why three-way in one test: the author's time is the scarce resource, and one session answers
 both questions (does pretraining help, does design help). Why 300: about 15 minutes of judging.
+
+**D13. The designer: an LLM subagent wrote one design for each of the 300 blind-test concepts**
+(`kanji_diffusion/designs300.json`), from 148 part names that each appear in 15 or more training
+characters, positions restricted to the seven the captions use, steering away from compositions of
+known kanji. Arm 4 drew four glyphs per design at guidance 1.5 (`journal/arm4-components/llm_designs_preview.png`).
+Read by eye: most rows carry both parts (言+火 for Landauer's principle, 金+頁 for Mimiron's head,
+車+牛 for the Lamborghini, 耳 for the iPod Shuffle, 目+黒 for Oakley); some keep only the radical
+(Widowmaker: 女 instead of "husband"; Jensen Huang: the leather part is lost). Why an LLM and not a
+lookup table: choosing an apt second part (a pun, an allegory) is the creative act the diffusion model
+cannot do, and it is exactly what the author found missing ("typical" outputs).
