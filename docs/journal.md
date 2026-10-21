@@ -161,3 +161,7 @@ characters that are rare as recognisable components.
 Proposed attempt 3 (after attempt 2 ends): logit-normal timesteps shifted to high noise + Min-SNR γ=5;
 oversample simple (few-stroke) characters; high lr on attn2 to_k/to_v; last CLIP layers unfrozen at 2e-6;
 ~12,000 more steps with the usual stop rule. Estimated 3.5 h, ~$6.5.
+- 3,000 steps (11:44, `journal/sd15-attempt2/step003000.png`): caption gain 4.8% (0.5, 3.0, 4.8:
+  rising, decelerating). New hits: fire gives 火 in one sample, bird has 鳥 in both. Heart gives 中
+  ("middle, inside"), a neighbouring meaning of *heart*, not 心. Fidelity 0/24; within-prompt similarity
+  0.394 (variety still falling).
