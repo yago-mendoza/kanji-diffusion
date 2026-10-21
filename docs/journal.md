@@ -133,3 +133,31 @@ objective (epsilon) is the main reason. Cause 2 (grey backgrounds) and cause 3 (
   1,000-step figure; the stop rule passes. Sheet: water 氵 in both samples, tree 木 in both, fish 魚 in
   both, bird one with 鳥 at the foot, fire one with 灬. Fidelity still 0/24: the right radical, not yet the
   exact character. Within-prompt similarity 0.371 (variety falling a little). Continue to 6,000.
+
+### Research and hypotheses (11:30–11:45)
+
+A literature and model-card search (sources in the session; key ones here):
+- The January 2023 "fake kanji" model that hardmaru shared was trained by **enpitsu** (HF user `epts`):
+  10,358 kanji at 512 px, captions = all meanings joined by commas (our long caption); demo samples at
+  256 px, DPM++ 25 steps, **CFG 7.5**. Training hyperparameters are in a gated repo (`epts/kanji`).
+- **Glyffuser** (yue-here.com/posts/glyffuser, from scratch, T5, Unihan definitions) reports our exact
+  symptom: meanings switch on their radical in the usual position, but **the base character rarely
+  appears, because far more training samples contain the radical than are the radical alone**; suggests
+  frequency weighting; CFG 5–15.
+- Text acts at high noise and is nearly ignored at low noise (eDiff-I, arXiv 2211.01324; TGATE,
+  arXiv 2404.02747): consistent with the diagnosis above.
+- Interventions with published evidence: logit-normal timestep sampling (SD3, arXiv 2403.03206);
+  Min-SNR-γ weighting, γ=5, ~3.4× faster convergence (arXiv 2303.09556); cross-attention K/V only is
+  enough for new concepts (Custom Diffusion, arXiv 2212.04488); training the text encoder at 1e-6 to
+  2e-6 helps (HF DreamBooth study); epoch budgets of ~100 (Glyffuser) against our ~60.
+
+Hypothesis test H2, "guidance too low" (`journal/sd15-attempt2/cfg_sweep_step2000.png`, rows w = 3, 7.5,
+12 with rescale 0.7, and 7.5 without; columns water, tree, mountain, fish, rain, heart, woman, gold):
+**rejected**. Higher guidance cleans the strokes but does not fix the character: water (氵), tree (木) and
+fish (魚) are right at every scale, mountain (no 山), heart (no 心), woman (no 女) and gold (no 金) wrong at
+every scale. The pattern is Glyffuser's: right where the meaning is a frequent radical, wrong for base
+characters that are rare as recognisable components.
+
+Proposed attempt 3 (after attempt 2 ends): logit-normal timesteps shifted to high noise + Min-SNR γ=5;
+oversample simple (few-stroke) characters; high lr on attn2 to_k/to_v; last CLIP layers unfrozen at 2e-6;
+~12,000 more steps with the usual stop rule. Estimated 3.5 h, ~$6.5.
