@@ -47,7 +47,8 @@ def generate(unet, vae, prompts: list[str], *, text_model: str, emb_null: torch.
 
 
 def _font(size: int):
-    for name in ("arial.ttf", "DejaVuSans.ttf"):
+    # CJK-capable faces first, so sheets can label a glyph with its nearest kanji.
+    for name in ("YuGothM.ttc", "msgothic.ttc", "NotoSansCJK-Regular.ttc", "arial.ttf", "DejaVuSans.ttf"):
         try:
             return ImageFont.truetype(name, size)
         except OSError:

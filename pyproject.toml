@@ -15,6 +15,9 @@ dependencies = [
   "svg.path>=6.3",
 ]
 
+[project.optional-dependencies]
+figures = ["matplotlib>=3.8"]
+
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
