@@ -19,11 +19,11 @@ from PIL import Image, ImageDraw, ImageFont
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 OUT = ROOT / "docs"
-BG, INK, LABEL, DIM = (12, 12, 13), (236, 233, 226), (150, 148, 142), (88, 87, 84)
+BG, INK, LABEL, DIM = (255, 255, 255), (20, 20, 20), (60, 60, 60), (120, 120, 120)
 
 
 def font(size: int, cjk: bool = False):
-    for name in (("YuGothM.ttc", "msgothic.ttc", "NotoSansCJK-Regular.ttc") if cjk else ("consola.ttf", "DejaVuSansMono.ttf")):
+    for name in (("YuGothM.ttc", "msgothic.ttc", "NotoSansCJK-Regular.ttc") if cjk else (str(Path(__file__).with_name("DejaVuSerif.ttf")), "georgia.ttf")):
         try:
             return ImageFont.truetype(name, size)
         except OSError:

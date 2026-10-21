@@ -27,7 +27,7 @@ Everything runs on CUDA when it is available and falls back to the CPU otherwise
 
 ## How it works
 
-![Training and sampling paths](docs/fig-pipeline.png)
+![Training and sampling paths](docs/paper/stages.png)
 
 The autoencoder (orange, trained first) turns a 64×64 glyph into a 16×16×4 latent and back;
 it only ever learns to redraw. The U-Net (orange, trained second) learns on those latents to
@@ -35,11 +35,11 @@ predict what noise was added, reading the frozen CLIP embedding of the caption t
 cross-attention. Sampling starts from pure noise and removes it in 30 DPM-Solver++ steps with
 classifier-free guidance, then decodes once.
 
-![The autoencoder](docs/fig-autoencoder.png)
+![The autoencoder](docs/paper/architecture.png)
 
-![What the U-Net expects the finished glyph to be during sampling](docs/fig-trajectory.png)
+![What the U-Net expects the finished glyph to be during sampling](docs/paper/trajectory.png)
 
-![Guidance scales 0 to 8](docs/fig-guidance.png)
+![Fidelity against variety across guidance scales](docs/paper/guidance_sweep.png)
 
 `docs/paper_figures.py` draws these from a trained run (`pip install -e .[figures]`).
 

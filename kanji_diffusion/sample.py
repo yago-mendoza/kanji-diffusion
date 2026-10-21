@@ -29,6 +29,11 @@ def _encoder(name: str) -> TextEncoder:
 def generate(unet, vae, prompts: list[str], *, text_model: str, emb_null: torch.Tensor | None = None,
              n: int = 1, steps: int = 30, guidance: float = 3.0, seed: int = 0, device: str = "cpu") -> np.ndarray:
     """Returns uint8 images (len(prompts) * n, H, W), black ink on white."""
+    if vae is None:  # a fine-tuned Stable Diffusion pipeline (see finetune_sd); output brought to 64 px to compare
+        g = torch.Generator(device).manual_seed(seed)
+        out = unet([p for p in prompts for _ in range(n)], num_inference_steps=steps, guidance_scale=guidance,
+                   generator=g).images
+        return np.stack([np.asarray(im.convert("L").resize((64, 64), Image.LANCZOS)) for im in out])
     enc = _encoder(text_model)
     cond = enc.encode([p for p in prompts for _ in range(n)]).to(device)
     null = (emb_null if emb_null is not None else enc.encode([""])[0]).to(device).expand_as(cond)
@@ -75,6 +80,13 @@ def sample_grid(unet, vae, prompts: list[str], path: Path, *, n: int = 1, scale:
 
 
 def load_run(run: Path, device: str = "cpu"):
+    """A small-model run (unet, vae, config), or a fine-tuned Stable Diffusion run as (pipeline, None, config)."""
+    if (run / "pipeline" / "model_index.json").exists():
+        from diffusers import StableDiffusionPipeline
+        dtype = torch.float16 if device == "cuda" else torch.float32
+        pipe = StableDiffusionPipeline.from_pretrained(run / "pipeline", torch_dtype=dtype).to(device)
+        pipe.set_progress_bar_config(disable=True)
+        return pipe, None, {"text_model": "pipeline"}
     cfg = json.loads((run / "config.json").read_text())
     unet = UNet2DConditionModel.from_pretrained(run / "unet").to(device).eval()
     return unet, GlyphVAE.load(run / "vae", device), cfg

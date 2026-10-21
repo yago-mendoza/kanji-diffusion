@@ -77,7 +77,8 @@ def main() -> None:
     ap.add_argument("--out", type=Path, default=Path("outputs/eval"))
     args = ap.parse_args()
 
-    unet, vae, cfg = load_run(args.run)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    unet, vae, cfg = load_run(args.run, device)
     data = torch.load(args.data)
     real, chars, captions = data["images"].numpy(), data["chars"], data["captions"]
     base = baseline(real)
@@ -89,7 +90,8 @@ def main() -> None:
     print(f"distinct real kanji: median nearest similarity {np.median(base):.3f}, 99th percentile {copy_at:.3f}")
     real_m = masks(real)
     for name, prompts in (("known", list(KNOWN)), ("novel", NOVEL)):
-        gen = generate(unet, vae, prompts, n=args.n, text_model=cfg["text_model"], guidance=args.guidance)
+        gen = generate(unet, vae, prompts, n=args.n, text_model=cfg["text_model"], guidance=args.guidance,
+                       device=device)
         sim = similarity(masks(gen), real_m)
         best, idx = sim.max(dim=1)
         idx, iou = idx.numpy(), best.numpy()
@@ -106,9 +108,14 @@ def main() -> None:
                 row["target"] = KNOWN[p]
                 row["target_rank"] = [int((sim[k] > sim[k, t]).sum()) + 1 for k in ks]
             rows.append(row)
-        report[name] = {"mean_similarity": round(float(iou.mean()), 3),
+        # Variety: mean similarity between the samples of one prompt (1 = the same glyph every time).
+        own = similarity(masks(gen), masks(gen))
+        pairs = [float(own[i * args.n + a, i * args.n + b]) for i in range(len(prompts))
+                 for a in range(args.n) for b in range(a + 1, args.n)]
+        report[name] = {"mean_similarity": round(float(iou.mean()), 3), "within_prompt": round(float(np.mean(pairs)), 3),
                         "near_copies": int((iou > copy_at).sum()), "samples": len(iou), "prompts": rows}
-        line = f"{name}: mean nearest similarity {iou.mean():.3f}, {(iou > copy_at).sum()}/{len(iou)} above {copy_at:.3f}"
+        line = (f"{name}: mean nearest similarity {iou.mean():.3f}, {(iou > copy_at).sum()}/{len(iou)} above {copy_at:.3f}, "
+                f"within-prompt similarity {np.mean(pairs):.3f}")
         if name == "known":
             ranks = np.array([r for row in rows for r in row["target_rank"]])
             report[name]["target_top1"] = int((ranks == 1).sum())

@@ -1,0 +1,44 @@
+[
+ {
+  "guidance": 0.0,
+  "fidelity": 0.0,
+  "variety": 0.7,
+  "novelty": 0.531
+ },
+ {
+  "guidance": 1.0,
+  "fidelity": 0.1875,
+  "variety": 0.62,
+  "novelty": 0.54
+ },
+ {
+  "guidance": 1.5,
+  "fidelity": 0.3958333333333333,
+  "variety": 0.5800000000000001,
+  "novelty": 0.546
+ },
+ {
+  "guidance": 2.0,
+  "fidelity": 0.3958333333333333,
+  "variety": 0.546,
+  "novelty": 0.552
+ },
+ {
+  "guidance": 3.0,
+  "fidelity": 0.375,
+  "variety": 0.516,
+  "novelty": 0.551
+ },
+ {
+  "guidance": 5.0,
+  "fidelity": 0.3958333333333333,
+  "variety": 0.46599999999999997,
+  "novelty": 0.555
+ },
+ {
+  "guidance": 8.0,
+  "fidelity": 0.4166666666666667,
+  "variety": 0.44199999999999995,
+  "novelty": 0.543
+ }
+]
