@@ -129,3 +129,7 @@ objective (epsilon) is the main reason. Cause 2 (grey backgrounds) and cause 3 (
   6,000 steps of attempt 1. Metrics lag the sheet: caption gain 0.5% (from 0.1% at step 30; the small
   model is at 47%), fidelity 0/24 (radicals right, not yet the exact dictionary character),
   within-prompt similarity 0.334. Decision: continue to the 2,000-step check.
+- 2,000 steps (11:26, `journal/sd15-attempt2/step002000.png`): **caption gain 3.0%**, six times the
+  1,000-step figure; the stop rule passes. Sheet: water 氵 in both samples, tree 木 in both, fish 魚 in
+  both, bird one with 鳥 at the foot, fire one with 灬. Fidelity still 0/24: the right radical, not yet the
+  exact character. Within-prompt similarity 0.371 (variety falling a little). Continue to 6,000.
