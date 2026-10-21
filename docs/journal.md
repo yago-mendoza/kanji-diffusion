@@ -407,3 +407,7 @@ the hairline style that this arm replaces; 8,000 steps instead of 6,000 for the 
 Infrastructure: pod 4m4t283g931qdo cannot start (its host's GPU is taken, the risk accepted in D14);
 new pod cumyascnzdr67p, H100 SXM at $3.99/h (no A100 with CUDA 12.8+ in stock), about twice as fast,
 so the run should cost about the same, near $6.
+- Arm 5 at 1,000 steps (`journal/arm5/step001000.png`, the demo prompts, two samples each): the brush
+  style is already there, backgrounds white, and water gives 氵 in both samples. On the H100 the run
+  goes at about 9 minutes per 1,000 steps (8,000 in about 74 minutes, about $5). When it ends, the pod
+  draws the keep test's 720 candidates by itself (`outputs/keep/gen_keep.py`).
