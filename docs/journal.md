@@ -378,3 +378,32 @@ stranger, more varied outputs. Decision: no further GPU work until the failure i
 (what *bad* is: illegible, too typical, ugly strokes, low resolution), because optimising a fourth proxy
 without it repeats the same mistake. Complexity of the decision: none; cost of skipping it: another
 A100 session spent on the wrong target.
+
+**D16. The author's diagnosis, and arm 5: reproduce enpitsu instead of inventing a fifth idea.** Asked
+what was wrong, he marked three things: the glyphs look like dictionary kanji, the link to the word
+cannot be seen, and the four samples are nearly identical. His reference is the fake kanji hardmaru
+shared in January 2023 (*Skyscraper, Pikachu, Elon Musk, Deep Learning, YouTube, Gundam*), which he
+wants with beautiful calligraphy and a pictographic quality one intuits before one can explain it.
+Those images are enpitsu's: Stable Diffusion taught *漢字とその意味を1万字*, ten thousand kanji with their
+meanings, and shown one chosen image per concept (sources:
+https://x.com/enpitsu/status/1610587513059684353, https://x.com/hardmaru/status/1611237067589095425;
+no training settings were published).
+Three differences from my SD arm follow, each cheap to close:
+- Vocabulary: 10,384 characters (every KANJIDIC2 entry with an English meaning, which is enpitsu's
+  ten thousand) instead of the 6,413 KanjiVG also draws. Why it matters for the author's complaint: a
+  model that knows 60% more meanings has more parts to borrow from when a word is new.
+- Style: drawn from fonts instead of KanjiVG's uniform hairline strokes, Yuji Syuku (a brush face) for
+  the 6,627 it covers and Shippori Mincho ExtraBold for the other 3,757, chosen over the regular mincho
+  so the two weights match (`kanji_diffusion/prepare_font.py`). Two changes in one run break the
+  one-variable rule on purpose: the goal of this arm is to reach the reference, not to attribute it;
+  an ablation follows only if it works.
+- Selection: enpitsu showed the best of many. Our blind test showed four random samples, which is a
+  fair test of a sampler and an unfair one of the idea. The next judgement will show many candidates
+  per concept and ask which ones the author would keep; the keep rate per system is the metric, and the
+  kept ones are the gallery.
+Training keeps attempt 2's recipe (v-prediction, zero terminal SNR, lr 2e-5 with 1e-4 on
+cross-attention, constant), from base SD 1.5 rather than attempt 2's U-Net, since that one learned
+the hairline style that this arm replaces; 8,000 steps instead of 6,000 for the same reason.
+Infrastructure: pod 4m4t283g931qdo cannot start (its host's GPU is taken, the risk accepted in D14);
+new pod cumyascnzdr67p, H100 SXM at $3.99/h (no A100 with CUDA 12.8+ in stock), about twice as fast,
+so the run should cost about the same, near $6.
