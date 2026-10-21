@@ -20,6 +20,9 @@ from .sample import _font, generate, load_run
 # Prompt and the kanji a dictionary gives for it.
 KNOWN = {"water": "水", "fire": "火", "tree": "木", "mountain": "山", "sun": "日", "moon": "月", "fish": "魚",
          "bird": "鳥", "rain": "雨", "heart": "心", "woman": "女", "gold": "金"}
+# Made-up words with no meaning: a model that reads meanings should not do as well on these.
+GIBBERISH = ["blorptax", "quindle", "vashmur", "trellopine", "skandrof", "plimbet", "gorvath", "nuxeline",
+             "draspen", "wolquin", "fesharo", "zinthrop"]
 NOVEL = ["pizza", "internet", "computer", "robot", "Elon Musk", "democracy", "airplane", "smartphone",
          "coffee", "algorithm", "cryptocurrency", "climate change"]
 
@@ -89,7 +92,9 @@ def main() -> None:
                                          "near_copy_threshold_p99": round(copy_at, 3)}}
     print(f"distinct real kanji: median nearest similarity {np.median(base):.3f}, 99th percentile {copy_at:.3f}")
     real_m = masks(real)
-    for name, prompts in (("known", list(KNOWN)), ("novel", NOVEL)):
+    import re
+    has_word = {w: np.array([bool(re.search(r"\b" + re.escape(w) + r"\b", c, re.I)) for c in captions]) for w in KNOWN}
+    for name, prompts in (("known", list(KNOWN)), ("novel", NOVEL), ("gibberish", GIBBERISH)):
         gen = generate(unet, vae, prompts, n=args.n, text_model=cfg["text_model"], guidance=args.guidance,
                        device=device)
         sim = similarity(masks(gen), real_m)
@@ -121,6 +126,17 @@ def main() -> None:
             report[name]["target_top1"] = int((ranks == 1).sum())
             report[name]["target_top10"] = int((ranks <= 10).sum())
             line += f", dictionary kanji nearest in {(ranks == 1).sum()}/{len(ranks)}, top 10 in {(ranks <= 10).sum()}"
+            report[name]["target_median_rank"] = int(np.median(ranks))
+            # Semantic hit: share of a sample's 20 nearest training glyphs whose caption contains the prompt word.
+            # It rewards the right family of components without rewarding a copy of the dictionary character.
+            # Control: the same count against the other prompts' words (chance level).
+            top = torch.topk(sim, 20, dim=1).indices.numpy()
+            hit = np.mean([has_word[prompts[k // args.n]][top[k]].mean() for k in range(len(gen))])
+            ctrl = np.mean([np.mean([has_word[w][top[k]].mean() for w in prompts if w != prompts[k // args.n]])
+                            for k in range(len(gen))])
+            report[name]["semantic_hit20"] = round(float(hit), 4)
+            report[name]["semantic_hit20_chance"] = round(float(ctrl), 4)
+            line += f", median target rank {int(np.median(ranks))}, semantic hit@20 {hit:.3f} (chance {ctrl:.3f})"
         print(line)
     (args.out / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 

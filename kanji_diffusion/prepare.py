@@ -7,6 +7,7 @@ KANJIDIC2 English meanings, plus the frozen CLIP text embeddings of those meanin
 from __future__ import annotations
 
 import argparse
+import re
 import gzip
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -43,6 +44,50 @@ def read_meanings(path: Path) -> dict[str, list[str]]:
         meanings = [m.text for m in ch.iter("meaning") if "m_lang" not in m.attrib and m.text]
         if meanings:
             out[ch.findtext("literal")] = meanings
+    return out
+
+
+POSITIONS = {"left": "left", "right": "right", "top": "top", "bottom": "bottom",
+             "tare": "top-left", "kamae": "around", "nyo": "bottom-left", "nyoc": "bottom-left"}
+
+
+def _clean(meaning: str) -> str:
+    """'pig's head radical variant (no. 58)' to 'pig's head': the text model reads words, not dictionary notes."""
+    m = re.sub(r"\(no\.?\s*\d+\)", "", meaning)
+    m = re.sub(r"\b(radical|variant|kanji)\b", "", m)
+    return re.sub(r"\s+", " ", m).strip(" ,-") or meaning
+
+
+def read_components(path: Path, meanings: dict[str, list[str]]) -> dict[str, str]:
+    """A caption of each character's first-level parts and where they sit, e.g. 明 -> 'day (left) and month (right)'.
+
+    Parts come from KanjiVG's decomposition; a part written in a variant form (氵) is named by the character it
+    stands for (水), which KanjiVG records as kvg:original.
+    """
+    root = ET.parse(gzip.open(path)).getroot()
+
+    def parts(g):
+        out = []
+        for c in g.findall("g"):
+            el = c.get(KVG_NS + "element")
+            if el:
+                name = meanings.get(c.get(KVG_NS + "original") or el) or meanings.get(el)
+                if name:
+                    out.append((_clean(name[0]), POSITIONS.get(c.get(KVG_NS + "position") or "")))
+            else:
+                out += parts(c)
+        return out
+
+    out: dict[str, str] = {}
+    for kanji in root.iter("kanji"):
+        if "-" in kanji.get("id", ""):
+            continue
+        g = kanji.find("g")
+        if g is None or not g.get(KVG_NS + "element"):
+            continue
+        ps = parts(g)
+        if len(ps) >= 2:
+            out[g.get(KVG_NS + "element")] = " and ".join(f"{m} ({p})" if p else m for m, p in ps)
     return out
 
 
@@ -97,6 +142,8 @@ def main() -> None:
     ap.add_argument("--raw", type=Path, default=Path("data/raw"))
     ap.add_argument("--out", type=Path, default=Path("data/kanji64.pt"))
     ap.add_argument("--text-model", default=TextEncoder.DEFAULT)
+    ap.add_argument("--components", action="store_true",
+                    help="add a third caption naming the character's parts, e.g. 'bright, made of day (left) and month (right)'")
     args = ap.parse_args()
 
     meanings = read_meanings(download(KANJIDIC_URL, args.raw / "kanjidic2.xml.gz"))
@@ -116,6 +163,13 @@ def main() -> None:
     emb_full = enc.encode(full)
     emb_first = enc.encode(first)
     emb_null = enc.encode([""])[0]
+    variants = [emb_full, emb_first]
+    comp_caps = None
+    if args.components:
+        comps = read_components(args.raw / "kanjivg.xml.gz", meanings)
+        comp_caps = [f"{first[i]}, made of {comps[c]}" if c in comps else first[i] for i, c in enumerate(chars)]
+        print(f"{sum(c in comps for c in chars)} characters get a component caption, e.g. {comp_caps[chars.index('明')]}")
+        variants.append(enc.encode(comp_caps))
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     torch.save(
@@ -123,7 +177,8 @@ def main() -> None:
             "chars": chars,
             "captions": full,
             "images": torch.from_numpy(images),
-            "emb": torch.stack([emb_full, emb_first], dim=1).half(),  # (N, 2, T, D)
+            "emb": torch.stack(variants, dim=1).half(),  # (N, 2 or 3, T, D)
+            "component_captions": comp_caps,
             "emb_null": emb_null.half(),
             "text_model": args.text_model,
             "size": args.size,

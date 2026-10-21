@@ -218,3 +218,55 @@ Revised plan, by value per GPU hour:
 4. Only then, if SD earns it, a clean attempt 3 with one change (more epochs, or LoRA at 256 px with
    synonym caption augmentation for words with few examples), weight decay 0 on attn2, eval parity,
    a rank-based caption metric, a copy check, and numeric stop rules.
+
+## Decision log from 12:30 (the author delegated the route: "go, justify every change")
+
+Goal, fixed with the author's earlier words: invented characters that are original and meaningful,
+judged blind by the author. Every decision below records what, why, what it costs and why this
+justification and not another.
+
+**D1. Attempt 2 is closed as a result, not continued** (12:32). Final: caption gain 7.2% (4.8, 6.0, 4.5,
+7.2 at 3k–6k: noisy plateau), within-prompt similarity 0.442 (0.334 at 1k: variety collapsing). Why:
+further full fine-tuning buys little meaning and costs the variety that is the only reason to use SD.
+Cost: none. Why this justification: the two numbers that matter for the goal (meaning, originality) both
+argue against continuing; fidelity is not used because it rewards copying the dictionary.
+
+**D2. New primary automatic metric: semantic hit@20 with a chance control** (`evaluate.py`). For each
+sample, the share of its 20 nearest training glyphs whose caption contains the prompt word; chance is the
+same count against the other prompts' words. Why: it rewards the right family of components without
+rewarding a copy, which matches the goal; exact top-1 stays as a secondary figure. Also added: median
+target rank, a gibberish prompt set (made-up words: a model that reads meaning should not draw them as
+convincingly), 8 samples per word instead of 4 (24 samples could not separate 0 from 3). Small model,
+guidance 1.5: hit@20 0.065 against chance 0.005 (13×), exact 39/96, median rank 10, within-prompt 0.443.
+A first run gave 0.000 for everything: the `\b` of the regex was destroyed by shell escaping; fixed with
+the edit tool, the known positive (the small model) is what exposed it.
+
+**D3. Evaluation parity**: `sample.py` now passes guidance rescale 0.7 to zero-terminal-SNR pipelines, as
+their training sheets did. Why: the reviewer found the final evaluation would not match the logged curve.
+
+**D4. Arm 3: the small model with SD's text encoder (CLIP ViT-L/14), nothing else changed** (12:41).
+Why: it isolates the question "is the small model's typicality due to its weak text encoder?" from "is SD
+better because it saw photographs?", which every SD run confounded. One deviation from arm 1, recorded:
+16,000 steps on one cosine instead of 10,000 + 6,000 on two. Cost: ~25 min on the A100 (11 steps/s,
+against 5 h on the laptop CPU). Why this arm before the component idea: it is the baseline the component
+idea must beat, and it is the cheapest unanswered question.
+
+**D5. Arm 4: arm 3 plus a third caption naming the parts** (12:43), e.g. 明 "bright, made of day (left) and
+month (right)", from KanjiVG's first-level decomposition (6,029 of 6,413 characters), part names from
+KANJIDIC first meanings, variant forms named by their original (氵 as water), KanjiVG's Japanese position
+terms translated (tare: top-left, kamae: around, nyō: bottom-left), dictionary notes stripped ("radical",
+"variant", "(no. 58)"). One change against arm 3. Why: the measured bottleneck is few examples per
+word–component pair (gold: 4 captions), while each part name has tens to hundreds of examples (tree 377,
+water 356, eat 41, gate 48, shellfish 81); a model that learns parts can be asked for a composition.
+The caption keeps the meaning in front so the same model still answers plain words.
+
+**D6. The designer: component designs for the 12 invented words** (`kanji_diffusion/designs.json`), two
+per word, written by Claude as an inventor would (a semantic part, often a second part that narrows it),
+using only part names present in the training captions. Why two: if two different designs give the
+same glyph, the model ignores the design. Why in-vocabulary: a design the model never saw a word for
+(food instead of eat) would test vocabulary, not composition.
+
+**D7. Design metric** (`kanji_diffusion/design.py`): for each design, the share of a sample's 20 nearest
+training glyphs whose component caption contains every part of that design, against the same share for
+the other design of the same word. The other design is the control. Arm 3 (no component captions) is the
+control for arm 4. Chained on the pod to run when both arms finish.

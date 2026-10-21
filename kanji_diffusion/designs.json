@@ -1,0 +1,15 @@
+{
+  "_about": "Component designs for words that have no kanji, written as an inventor of a character would: a semantic part (what it is about) and often a second part that narrows it. Part names come only from the vocabulary the model was trained on (KANJIDIC first meanings of KanjiVG components), so every design is in distribution. Two designs per word, to test that the design, not the word, decides the glyph.",
+  "pizza": [["eat (left) and pelt (right)", "food, and the crust as a skin"], ["dish (top) and fire (bottom)", "something baked on a plate"]],
+  "internet": [["gate (around) and thread", "a gateway made of threads"], ["thread (left) and net (right)", "threads woven into a net"]],
+  "computer": [["gold (left) and measurement (right)", "a metal thing that measures, like the metal radical in machine words"], ["gold (left) and say (right)", "a metal thing that speaks"]],
+  "robot": [["gold (left) and person (right)", "a metal person"], ["gold (left) and power (right)", "metal with strength"]],
+  "Elon Musk": [["car (left) and fire (right)", "cars and rockets"], ["person (left) and large (right)", "a big man"]],
+  "democracy": [["person (left) and say (right)", "people who speak"], ["person (top) and all (bottom)", "everyone"]],
+  "airplane": [["gold (left) and bird (right)", "a metal bird"], ["feathers (top) and car (bottom)", "a vehicle with wings"]],
+  "smartphone": [["hand (left) and say (right)", "speech held in the hand"], ["hand (left) and eye (right)", "something held and looked at"]],
+  "coffee": [["water (left) and black (right)", "a black liquid"], ["eat (left) and black (right)", "black food"]],
+  "algorithm": [["thread (left) and measurement (right)", "an ordered thread of measured steps"], ["say (left) and number one (right)", "instructions, one by one"]],
+  "cryptocurrency": [["shellfish (bottom) and false (top)", "shell money, the radical of money and value, made unreal"], ["gold (left) and hole (right)", "money with nothing inside"]],
+  "climate change": [["rain (top) and fire (bottom)", "the weather turning hot"], ["day (left) and rain (right)", "sun and rain, the weather"]]
+}

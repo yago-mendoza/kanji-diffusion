@@ -31,8 +31,10 @@ def generate(unet, vae, prompts: list[str], *, text_model: str, emb_null: torch.
     """Returns uint8 images (len(prompts) * n, H, W), black ink on white."""
     if vae is None:  # a fine-tuned Stable Diffusion pipeline (see finetune_sd); output brought to 64 px to compare
         g = torch.Generator(device).manual_seed(seed)
+        # A zero-terminal-SNR run samples with guidance rescale, as during its training (finetune_sd.guidance_kw).
+        extra = {"guidance_rescale": 0.7} if unet.scheduler.config.get("rescale_betas_zero_snr") else {}
         out = unet([p for p in prompts for _ in range(n)], num_inference_steps=steps, guidance_scale=guidance,
-                   generator=g).images
+                   generator=g, **extra).images
         return np.stack([np.asarray(im.convert("L").resize((64, 64), Image.LANCZOS)) for im in out])
     enc = _encoder(text_model)
     cond = enc.encode([p for p in prompts for _ in range(n)]).to(device)
