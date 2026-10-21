@@ -1,0 +1,125 @@
+# Experiment journal
+
+Raw notes for the write-up, in order, with what was tried, what failed and why. Times are UTC.
+Figures referenced here live in `docs/journal/`.
+
+The question: what does a model know about kanji when kanji is all it has seen, and what changes when
+it starts from a model that has seen billions of images? Two arms, same data (the 6,413 characters with
+KanjiVG strokes and KANJIDIC2 meanings), same two captions per character, same 10% caption dropout,
+same evaluation (`kanji_diffusion.evaluate`).
+
+## Arm 1: small latent diffusion model from scratch, laptop CPU (2026-10-21, 01:00–09:00)
+
+- Setup: GlyphVAE 64×64×1 to 16×16×4 (1.6M params), frozen CLIP ViT-B/32, U-Net 17.4M params,
+  v-prediction, cosine schedule, AdamW lr 4e-4 (warmup 300, cosine), batch 64, EMA 0.999.
+- Autoencoder: 3,000 steps, 43 min, held-out L1 0.0055.
+- Denoiser: 10,000 steps in 3 h 17 min, then resumed to 16,000 with a second cosine (~2 h).
+- Training sheets: `journal/small/step000500.png` (dotted strokes), `step002000.png` (clean strokes,
+  radicals in place: 魚 for fish, 雨 for rain, 金 for computer), `step010000.png`, `step016000.png`.
+- Evaluation at 16k, guidance 3: dictionary kanji is the nearest training glyph in 18/48 samples
+  (3/48 at 10k); no sample above the near-copy line (0.78, the 99th percentile of real-to-real
+  similarity); 4,908 glyphs for 1,227 concepts, none above it either (max 0.73).
+- Guidance sweep: fidelity 0% at w=0, 19% at w=1, 38–42% from w=1.5 to 8; variety falls monotonically
+  with w. w=1.5 keeps the fidelity of w=3 with more variety.
+- Weakness the author noticed in the picker page: characters look *typical*, the same radical in all
+  four samples of a prompt (木 ×4 for Euler–Lagrange, 糸 ×4 for Hessian). Diagnosis: the model's only
+  visual vocabulary is kanji components; CLIP B/32 gives abstract terms a vague embedding; guidance 3
+  collapses variety. That motivated arm 2.
+
+## Arm 2, attempt 1: Stable Diffusion 1.5 fine-tune on a RunPod A100 (2026-10-21, 08:32–10:30)
+
+- Hardware: RunPod Secure Cloud, A100 SXM 80GB, US-MD-1, $1.79/h, pod `4m4t283g931qdo`.
+  Details of the rental: the Bits2Bricks piece and `C:\Users\yagom\Desktop\runpod-diario.md`.
+- Data: same characters rendered at 512 px (`prepare --size 512`), black on white, as RGB in [-1, 1].
+- Setup: `finetune_sd.py`, full U-Net fine-tune from `stable-diffusion-v1-5`, frozen CLIP ViT-L/14 and
+  VAE, epsilon prediction (the base model's), AdamW **lr 1e-5**, warmup 500, **cosine to zero**,
+  batch 32, 6,000 steps (30 epochs), bf16 autocast, gradient checkpointing, EMA 0.999.
+- Speed: 40-step smoke test measured 0.95 s/step (estimate had been 2.5–3.5); the full run averaged
+  1.04 s/step, 104 min. GPU 100%, 33.5 GB of 80.
+- Smoke test samples at 40 steps (`journal/sd15-attempt1/smoke-step000040.png`): still photographs
+  (a bird, mountains, Elon Musk, pizza), already greyscale.
+- 1,000 steps (`step001000.png`): kanji-like, thick marker strokes, dense compositions, grey vignetted
+  backgrounds, one sample still a photo of a bird on a branch.
+- 2,000–6,000 steps: style polished, **semantics never appear**. With the same seed, the sheets from
+  3,000 on are almost identical to each other (`step003000.png` … `step006000.png`): the weights were
+  barely moving.
+- Side by side at 5,000 steps (`compare-small16k-vs-sd5k.png`): the small model gives 木 山 雨 鳥 and 魚
+  where they belong; SD answers almost every word with the same kind of overloaded rare-looking
+  character. Tree, mountain, rain look nothing like their kanji; no meaningful radicals (門, 食/欠).
+- Evaluation (`evaluate`, 12 dictionary words × 4 samples): **fidelity 0/48 at every guidance tried
+  (0, 1, 1.5, 2, 3)**, top-10 0/48; within-prompt similarity 0.50–0.51; no near-copies (mean nearest
+  similarity 0.53). The sweep was stopped before 5 and 8, and the 1,227-concept picker generation was
+  stopped at 128/1,227 once the diagnosis below showed the model ignores the text: neither could tell
+  us anything.
+
+### Why attempt 1 failed (analysis written before the full evaluation, to be checked against it)
+
+1. **Learning rate too low for the task (most likely).** 1e-5 decayed on a cosine is the usual value
+   for teaching SD a *style*; the run's mean lr was about 5e-6, against 4e-4 for the small model. The
+   task here is not a style: the cross-attention has to unlearn that "tree" means a photo of a tree and
+   learn that it means the component 木. The cheap part (black ink, dense glyph on white) explains
+   almost all of the loss (0.014, dominated by white background) and is learned first; the
+   meaning-to-component signal is a small part of the loss and, at this lr, barely moves the weights.
+   Consistent with: style fixed early, semantics absent, sheets frozen from 3,000 steps on.
+2. **Grey backgrounds: SD 1.x noise schedule.** The schedule never destroys the mean brightness of the
+   image, so sampling starts from zero-mean (mid-grey) noise and the model never learned to drive the
+   whole image to pure white (Lin et al., 2023, *Common Diffusion Noise Schedules and Sample Steps Are
+   Flawed*). Standard fixes: offset noise, or zero terminal SNR with v-prediction (what the small model
+   uses, which is why it has no vignette).
+3. **Bug: EMA rounded to bf16 at every sample sheet.** `ema.to(dtype)` … `ema.float()` (lines 142–143
+   of `finetune_sd.py`) cast the EMA weights to bf16 and back every 1,000 steps: about 0.4% relative
+   error on every weight, six times. Adds noise to exactly the weights that are evaluated.
+4. **Process: flying blind.** The smoke test measured speed, not learning. During the run only the
+   sheets were watched, while a semantic metric existed (fidelity: does *tree* give 木). Measuring it
+   every 1,000 steps would have shown at 2,000 that semantics were not rising. No resumable checkpoint
+   (optimizer state) was saved either.
+
+### Diagnosis: does the model read the caption? (10:35–10:45)
+
+`kanji_diffusion/diagnose.py`: take 256 training glyphs, noise them at t = 200, 500, 800, and compare the
+model's estimate of the clean latent with each glyph's own caption against the caption of a random other
+glyph. The gain is how much lower the error is with the right caption.
+
+- First version measured the error on the predicted *noise*. It gave 0.0% for SD fine-tuned **and for
+  the original SD 1.5**, which certainly uses text: the measure was blind. In epsilon prediction, at high
+  noise the noise is almost the input itself, so predicting it is trivial with or without the caption.
+- Fixed version measures on the clean-latent estimate x̂₀, the same quantity for every model:
+
+  | model | t=200 | t=500 | t=800 |
+  |---|---|---|---|
+  | small model (CPU, v-prediction) | 3.1% | 17.5% | **47.0%** |
+  | SD 1.5, original | 0.0% | 0.0% | 0.5% |
+  | SD 1.5, fine-tuned (attempt 1) | 0.0% | 0.0% | **0.0%** |
+
+- The fine-tuned SD reconstructs kanji far better than the original (x̂₀ error at t=800: 0.087 against
+  0.216) **without using the caption at all**. The fine-tune turned it into an unconditional kanji
+  generator: it learned what a kanji looks like and learned that, for it, the caption predicts nothing.
+- Weights (`/tmp/w.py` on the pod): relative change from the base model 1.2% overall, 0.7% in the
+  cross-attention keys and values. Nothing broken (no NaN, no zeros): the weights barely moved.
+
+**The mechanism, now with evidence.** SD 1.5 is trained to predict the noise. The steps where the
+character's components are decided are the noisy ones, and there the epsilon loss is tiny (0.003 at
+t=800 against 0.02 at t=200) and almost independent of the caption, so the gradient towards using the
+text is almost nil. With a low learning rate the model takes the cheap route: style yes, semantics no.
+The small model predicts the velocity, which at high noise is the clean image; there the caption is
+worth 47% of the accuracy, and it learned the radicals by step 2,000.
+
+Corrections to the earlier analysis: cause 1 (learning rate) stands but is the smaller half; the
+objective (epsilon) is the main reason. Cause 2 (grey backgrounds) and cause 3 (EMA bug) stand.
+
+### Attempt 2: train SD like the small model (launched 10:49)
+
+- `--v-prediction`: velocity target, so the high-noise steps carry a clean-image loss.
+- `--zero-snr`: schedule rescaled to zero terminal SNR, trailing timesteps, DDIM sampling with guidance
+  rescale 0.7 (Lin et al., 2023). Fixes the grey vignette and fits v-prediction.
+- `--lr 2e-5 --lr-xattn 1e-4 --constant`: five times more on the cross-attention, the layers that read
+  the caption; no decay to zero.
+- Starts from attempt 1's U-Net (`--init-unet runs/sd15/pipeline/unet`), which already has the style.
+- EMA bug fixed (sheets sampled from a bf16 copy); resumable `state.pt` every 1,000 steps.
+- Every 1,000 steps: caption gain at t=800, fidelity on 12 words × 2 samples, within-prompt similarity.
+  Stop rule: if the caption gain is still ~0% at 2,000 steps, stop.
+- 30-step smoke test passed after fixing two bugs it caught (a local variable shadowing the sampler
+  function; the caption-gain figure being overwritten in the log line). Baseline at step 30: caption gain
+  0.1%, fidelity 0/24.
+- Repeat of the `pkill -f` trap from the Bits2Bricks piece: a remote `pgrep -f "run_post.sh"` matched its
+  own SSH command and killed it (exit 255). Pattern with brackets (`[r]un_post`) or kill by pid.
