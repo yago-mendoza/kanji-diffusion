@@ -76,7 +76,7 @@ classifier-free guidance, then decodes once.
   <img src="docs/paper/guidance_sweep.png" width="720" alt="Two charts: fidelity against variety for guidance scales from 0 to 8, and similarity of invented words to the training set against guidance">
 </p>
 
-The two diagrams above are the redrawn versions from the write-up; `docs/paper_figures.py` draws plain versions of them (`docs/paper/`), and the other two figures, from a trained run (`pip install -e .[figures]`).
+The two diagrams are the redrawn versions from the write-up. `docs/paper_figures.py` draws all four figures from a trained run into `docs/paper/` (`pip install -e .[figures]`), the diagrams in a plainer style.
 
 ## Results
 
