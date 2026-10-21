@@ -82,6 +82,11 @@ pip install torch --index-url https://download.pytorch.org/whl/cpu   # or a CUDA
 pip install -e .
 ```
 
+## Pretrained weights
+
+The weights after 16,000 steps are in the [v0.2.0 release](https://github.com/yago-mendoza/kanji-diffusion/releases/tag/v0.2.0).
+Unzip `kanji-diffusion-16k.zip` into `runs/` and skip straight to step 4 below.
+
 ## Run
 
 ```bash
