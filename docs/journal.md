@@ -180,3 +180,41 @@ Starts from attempt 2's final U-Net. Changes, each against the evidence above:
   unfrozen, so meanings can separate before the cross-attention.
 - Same as attempt 2: v-prediction, zero terminal SNR, lr 1e-4 on attn2 and 2e-5 elsewhere, constant.
 - 12,000 steps, checks every 1,000; a 30-step smoke test runs first in the chain and stops it if it fails.
+
+### Red-team review and revision (12:00–12:25): attempt 3 disarmed
+
+An independent review of the journal and code, plus two checks, changed the plan.
+
+- **Caption gain is not comparable across the two models.** Same t, different noise: ᾱ at t=800 is
+  0.093 for the small model's cosine schedule and 0.018 for SD with zero terminal SNR (the small model's
+  t=800 corresponds to SD's t≈641). SD latents also carry texture no caption can predict. The 47% was
+  never an attainable target for SD; attempt 1's conclusion stands (0.0% at every level).
+- **"Radical yes, base no" is not radical frequency** (Glyffuser's explanation). Co-occurrence check on
+  KanjiVG components (CPU): the predictor is the number of training captions linking the word to its
+  component. Successes: tree 67 captions, water 46, fish 31, bird 17. Failures: heart 11, sun 11,
+  woman 9, rain 8, moon 6, gold 4, even where the association is near perfect (woman: 89% of its captions
+  belong to characters with 女). Exception: mountain (27, fails). Few examples per word–component pair,
+  which SD needs more of than the small model because it must unlearn its photographic prior first.
+- **Fidelity (exact top-1 by pixel IoU after 512 to 64) is unfair to SD and measures the opposite of the
+  goal**: the author wants *more original* glyphs, and reproducing the dictionary character rewards the
+  typical. 24 samples from one seed cannot separate 0/24 from 3/24.
+- **Attempt 3 as armed was a bad experiment** and was disarmed at 12:19, before it started: four changes
+  at once; the simple-character boost would have inflated fidelity by memorisation (8 of the 12 test
+  words have ≤6 strokes); weight decay 1e-2 at lr 1e-4 would erode the cross-attention (~1.2% over 12k
+  steps, more than attempt 1 moved it in total); the trainable text encoder had no EMA; `evaluate.py`
+  samples without guidance rescale while training logs used it.
+- Min-SNR: dropping it was right; the reasoning was incomplete (plain v loss already overweights low
+  noise; a cap on the high-SNR side only would keep full weight at high noise). The logit-normal draw over
+  the DDPM index is a heuristic, not SD3's distribution.
+- Risks not watched: variety falling (within-prompt similarity 0.334 to 0.394); no copy check during
+  training.
+
+Revised plan, by value per GPU hour:
+1. Evaluate attempt 2 on what the project asks: invented words, copies, variety, and a blind comparison
+   against the small model on the 1,227-concept picker.
+2. Small model with SD's CLIP ViT-L/14 and a larger U-Net (the planned third arm): minutes on the A100,
+   separates "better text encoder" from "pretrained on photographs".
+3. Hybrid: small-model samples re-rendered by SD attempt 2 through img2img at strength 0.4–0.6.
+4. Only then, if SD earns it, a clean attempt 3 with one change (more epochs, or LoRA at 256 px with
+   synonym caption augmentation for words with few examples), weight decay 0 on attn2, eval parity,
+   a rank-based caption metric, a copy check, and numeric stop rules.
