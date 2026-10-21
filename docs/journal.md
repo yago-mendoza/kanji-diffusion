@@ -356,3 +356,13 @@ Read by eye: most rows carry both parts (言+火 for Landauer's principle, 金+�
 (Widowmaker: 女 instead of "husband"; Jensen Huang: the leather part is lost). Why an LLM and not a
 lookup table: choosing an apt second part (a pun, an allegory) is the creative act the diffusion model
 cannot do, and it is exactly what the author found missing ("typical" outputs).
+
+**D14. Pod stopped while the author judges** (13:55 UTC). The blind test is live (300 concepts, three
+systems, one pairing per concept; votes stored with the hidden assignment). Arms 3 and 4 copied to
+`runs/smallL`, `runs/smallLC` and run on the laptop CPU; evaluations copied to `outputs/pod/`. Pod
+4m4t283g931qdo stopped (status EXITED, read back): compute billing ends, the 50 GB volume at
+/workspace survives at the stopped-disk rate, the container disk is wiped. Uptime 19,326 s at $1.79/h,
+about $9.6 of compute. Why stop now: every next GPU step (more designs per concept, a larger arm 4,
+hanzi data) depends on the verdict, and an idle A100 costs more per hour than any of those steps.
+Risk accepted: on restart the GPU on that host may be taken; the volume can then be reached with a
+zero-GPU start, and every result needed is already on the laptop.
