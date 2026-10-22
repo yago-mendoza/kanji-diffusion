@@ -538,3 +538,16 @@ every 1,000 steps with the U-Net kept. Why Jōyō and not the whole set: binding
 same depth would take about five times the steps (about 6.5 h, $26), and the characters outside Jōyō
 are the dense ones the author found too intricate. Cost: about 80 minutes on the H100 already
 running, about $5.5.
+
+**D21. Arm 8 binds, and the meaning shows in the radical.** The first launch stopped at step 2,000:
+the volume's quota filled with arm 7's U-Nets and two optimiser states, which were deleted (arm 7's
+and the diagnostic's pipelines kept), and the run resumed from step 1,000 without per-save U-Nets.
+Caption gain by thousand steps: 0.2, 1.8, 5.9, 11.2, 16.3, 22.8, 30.3, 36.8%, still rising about 7
+points per 1,000. At step 8,000 (`journal/arm8/probe_g7.5_s512_step008000.png`, columns are
+hardmaru's 25 words) the photographs are gone, backgrounds are mostly white, and the reference's
+mechanism appears: Water carries 氵 in all four seeds, Gold 金 in two, Wood 木 in two, Soil 土 in one.
+The glyphs, about 10 to 18 strokes, are simpler than arm 7's and still denser than the reference's.
+Guidance 3 and 7.5 give almost the same glyph per seed, so guidance is not a lever here.
+Because the gain has not levelled off, the next step is more of the same: arm 8 resumed to 16,000
+steps (about 70 minutes, about $5), probes every 1,000. Why this and not a new idea: it is the only
+quantity the evidence says is short, and the curve gives a direct prediction to check it against.
