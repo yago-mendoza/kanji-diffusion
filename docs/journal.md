@@ -440,3 +440,13 @@ result is a scale from SD's picture to a kanji, and the author picks where the w
 felt; that point is the model. Why this and not more data or another base model: it is the one
 explanation that also accounts for enpitsu, and it costs one short run (H100, about 45 minutes, about
 $3). The pod stops itself when the results are fetched or 30 minutes after the end.
+- Arm 6 ran 3,000 steps (twice: the first run broke at step 250 on a variable of mine that shadowed
+  the caption check, and the relaunch pulled the code before the fix reached GitHub). Probe sheets
+  in `journal/arm6/` (steps 0, 500, 1,000 and 3,000; columns are the probe words, rows four samples).
+  What they show: the hypothesis holds in direction (at 0 the words are pictures, by 1,000 almost
+  all are kanji), but the passage is a switch, not a blend. Each sample is either SD's picture or a
+  kanji; the fused glyphs (Pikachu with brush strokes, Gundam's head drawn as strokes at 250 and
+  500) are a few out of forty. Caption gain stays at -0.2%: with SD's own objective the meaning
+  barely steers which kanji comes out. The author marks the scale page
+  (https://claude.ai/artifact/PNV1ttNgd6n3qR6xJHeDhK) before anything else is decided. The pod
+  (yvekpoa70baehw) is stopped with the thirteen U-Nets on its disk; about $3 for the run.
