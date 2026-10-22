@@ -591,3 +591,29 @@ at 7,000, 0.679 at 8,000, 0.793 at 16,000; words whose samples are nearly one im
 component, and 王 itself for Elon Musk in two seeds, as in hardmaru's image
 (`journal/arm9/arm9-invent-vs-recall.png`, `arm9-hardmaru-vs-mine.png`). The U-Nets of 6,000 and
 7,000 and the 16,000 pipeline were downloaded and the pod terminated (2 h 41 min, about $11).
+
+**D24. A blind test against enpitsu, and LoRA arms 10 and 10b: the calligraphy at once, the meaning
+barely.** The author's sister (an artist, who had not seen hardmaru's image) judged 25 blind duels,
+enpitsu's glyph against one of the two step-6,000 glyphs picked by eye, both redrawn the same way (ink
+box, margin, size, threshold) with sides and order shuffled: enpitsu 17, ours 8 (one judge; 17 of 25 or
+more comes by chance about 5% of the time). Ours won where the dictionary answers (Fire, Wood, Soil,
+Elon Musk); his won where the word has to be drawn (Skyscraper: 金 beside a tall box of windows,
+Pikachu, YouTube, iPhone). The reading: our full fine-tune reasons by dictionary meaning and may have
+overwritten what Stable Diffusion knows of how things look, so a LoRA, which leaves those weights
+frozen, should keep it.
+`finetune_sd.py --lora R` (new `kanji_diffusion/lora.py`, no extra dependency) trains a rank-R update
+on the query, key, value and output of every attention layer; saved U-Nets are the fused model, the
+updates alone go to `lora/` (25 MB). Checked on CPU: identical to the base at step 0, fused output
+equal to the LoRA's to 2e-6, reloads. Pod `4b4fr74dlqxdcn` (L40S, secure, US-TX-4, $1.09/h; a LoRA at
+256 px fits in 35 GB), 3.3 steps a second.
+Arm 10: Jōyō at 256 px, rank 64, lr 1e-4, 10,000 steps. Caption gain every 1,000: 0.1, 0.0, 0.1, 0.0,
+0.1, 0.4, 1.1, 1.2, 1.9, 2.6% (arm 9b: 24.6% at 4,000). Arm 10b, the same at lr 5e-4: -0.1, 0.1, 0.8,
+2.1, 2.3, 3.4, 2.8, 4.4, 5.4, 6.8%, still rising. Both draw clean kanji from the first 1,000 steps;
+the meaning arrives in a few words only. At 10,000 of 10b (`journal/arm10/arm10b-lr5e-4-step10000.png`):
+氵 for Water in 8 of 8, 言 (speech) for YouTube in 8 of 8, 金 for Gold and for Skyscraper in 3 of 8
+(hardmaru's Skyscraper is 金 on the left), nothing for Pikachu; Elon Musk keeps grey photographic
+backgrounds, Stable Diffusion's prior showing as texture rather than as a picture of anything.
+A rank-64 update on the attention learns the look in minutes but binds words to components about ten
+times slower than the full fine-tune, so it cannot yet test whether keeping the prior brings the
+picture. Not run: a longer 10b, a higher rank, or the text encoder. Both pods' galleries, LoRA weights
+and probes were downloaded and the pod terminated (about 2 h, about $2.3).
