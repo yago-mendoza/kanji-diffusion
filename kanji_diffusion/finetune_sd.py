@@ -121,7 +121,8 @@ def main() -> None:
     ap.add_argument("--train-text-layers", type=int, default=0, help="unfreeze the last N CLIP text layers")
     ap.add_argument("--lr-text", type=float, default=2e-6)
     ap.add_argument("--probe", type=Path, help="words the data never names, drawn at every save to watch the picture turn into a kanji")
-    ap.add_argument("--probe-guidance", type=float, default=5.0)
+    ap.add_argument("--probe-guidance", type=float, nargs="+", default=[5.0])
+    ap.add_argument("--probe-sizes", type=int, nargs="+", help="resolutions to draw the probe words at (default: the data's)")
     ap.add_argument("--save-unets", action="store_true", help="keep the EMA U-Net of every save, so any point can be chosen afterwards")
     args = ap.parse_args()
 
@@ -224,11 +225,17 @@ def main() -> None:
         return (errs[1] - errs[0]) / errs[1]
     unet.train()
     t0, running = time.time(), None
+    def draw_probes(model, text, step):
+        """The probe words, four samples each, at every guidance and size asked for: one sheet per setting."""
+        probe_words = [w.strip() for w in args.probe.read_text(encoding="utf-8").splitlines() if w.strip()]
+        for g in args.probe_guidance:
+            for s in args.probe_sizes or [size]:
+                sample_sheet(model, vae, text, tokenizer, probe_words, args.out / f"probe/g{g:g}_s{s}/step{step:06d}.png",
+                             n=4, guidance=g, size=s)
+
     if args.probe and start == 1:
         # Step 0: what the untouched model draws for the probe words, the far end of the scale.
-        probe_words = [w.strip() for w in args.probe.read_text(encoding="utf-8").splitlines() if w.strip()]
-        sample_sheet(copy.deepcopy(ema).to(dtype).eval(), vae, copy.deepcopy(text_encoder).to(dtype).eval(), tokenizer, probe_words,
-                     args.out / "probe/step000000.png", n=4, guidance=args.probe_guidance, size=size)
+        draw_probes(copy.deepcopy(ema).to(dtype).eval(), copy.deepcopy(text_encoder).to(dtype).eval(), 0)
     for step in range(start, args.steps + 1):
         idx = torch.multinomial(weights, args.batch, replacement=True)
         z0 = latents[idx.to(device)]
@@ -270,9 +277,7 @@ def main() -> None:
             sampling_text = copy.deepcopy(text_encoder).to(dtype).eval()
             sample_sheet(sampling_unet, vae, sampling_text, tokenizer, DEMO_PROMPTS, args.out / f"samples/step{step:06d}.png", size=size)
             if args.probe:
-                probe_words = [w.strip() for w in args.probe.read_text(encoding="utf-8").splitlines() if w.strip()]
-                sample_sheet(sampling_unet, vae, sampling_text, tokenizer, probe_words, args.out / f"probe/step{step:06d}.png",
-                             n=4, guidance=args.probe_guidance, size=size)
+                draw_probes(sampling_unet, sampling_text, step)
             if args.save_unets:
                 sampling_unet.to(torch.float16).save_pretrained(args.out / f"unets/step{step:06d}")
                 sampling_unet.to(dtype)
