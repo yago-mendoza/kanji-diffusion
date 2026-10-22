@@ -491,3 +491,50 @@ components (3 against 7.5) and whether the smaller canvas simplifies it, side by
 reference. Why this before any idea of my own: three arms of mine (5, 6 and the font choice) were
 built on a description of the reference instead of the reference; the cheapest information now is
 what his exact recipe gives. Cost: H100, about 50 minutes, about $3.5.
+
+**D19. Arm 7: his style, none of his meaning.** The run finished in 52 minutes (loss 0.0077 from step
+1,000 on). The style is his: clean Mincho, black glyph centred at about three quarters of the frame
+(`journal/arm7/probe_g7.5_s512_step005000.png`, columns are hardmaru's 25 words, rows four seeds).
+Everything else fails:
+- The glyphs are as intricate as arm 6's, 20 to 30 strokes, at every step from 1,000 to 5,000.
+- The caption is ignored. Caption gain stayed between -0.4% and 0.1% at every save, and the probe
+  sheets show it plainly: the glyph at a given seed is the same whatever the word, and the same at
+  guidance 3 and 7.5. Only words the base model knows as pictures break through, as photographs
+  (Pikachu, Cumberbatch, Nicholas Cage, a skyscraper), and they fade with training.
+- The decisive test (`journal/arm7/fidelity.png`): the exact training captions of 水 木 土 王 日 月
+  口 女 give eight unrelated dense glyphs, so the model has not learned caption to glyph even on the
+  data it was trained on. Guidance cannot carry a meaning the model never bound.
+- At 256 px it draws crops and frames, as arm 5 did.
+So the semantic link cannot come from sampling settings: the model is, in effect, unconditional. The
+intricacy follows from that: with no caption to commit to, the model draws the average of the whole
+set, which is a dense glyph. (A side finding: 308 of his 10,358 captions match no KANJIDIC entry,
+and 火 is not in his set.)
+Two readings remain. A bug that keeps the caption from reaching training would give the same picture;
+the code reads correctly (captions and latents index the same rows, the text encoder is the one used
+to sample), but reading is not proof. Or binding 10,000 unique captions needs far more than 15 passes.
+One diagnostic separates them for about $1 on the pod already running: 256 glyphs (the eight above
+plus 248 random) for 1,500 steps, each seen about 190 times, cross-attention at 1e-4, the eight exact
+captions drawn every 500 steps. If those eight come out right, the code binds and the problem is scale;
+if they do not, there is a bug to find before any more GPU time.
+
+**D20. The code binds; arm 7 was short of passes and of cross-attention rate.** The 256-glyph
+diagnostic (cross-attention at 1e-4, 1,500 steps, each glyph seen about 190 times) gave caption gain
+3.4% at step 500, 22% at 1,000 and 44% at 1,500, against arm 7's zero. Its eight exact captions
+(`journal/overfit/captions_step001500.png`, columns 水 木 土 王 日 月 口 女) come out as the right
+character or, more often, as a new one built on it: four water glyphs all carrying 氵, wood glyphs on
+木, soil on 土, 日 itself, four variants of 女. That is the look of hardmaru's image: Mincho, one or two
+components, about 6 to 12 strokes, the meaning carried by one radical. So there is no bug, and the
+intricacy of arms 5 to 7 was the unconditional average, not the style.
+On hardmaru's words (`journal/overfit/hardmaru_words_g7.5.png`) this small model already puts 氵 in
+all four Water glyphs and 木 in three of the Wood ones; words whose nearest meaning is outside its 256
+characters (Gold, Elon Musk) fall back to dense glyphs, as expected of a vocabulary that holds no 金
+or 王. Two changes were made at once (fewer captions, ten times the cross-attention rate), so this
+does not say which one bound the text; it says binding is reachable and roughly what it costs.
+Arm 8 follows: enpitsu's glyphs restricted to the Jōyō characters (KANJIDIC grades 1 to 8, about
+2,100, median 10 strokes, the complexity of the reference, and the radicals the reference uses: 金 王
+氵 木 土), cross-attention at 1e-4, the rest at 1e-5, 8,000 steps of batch 32 (about 120 passes per
+character, the point where the diagnostic reached 22% gain), hardmaru's 25 words at guidance 3 and 7.5
+every 1,000 steps with the U-Net kept. Why Jōyō and not the whole set: binding 10,000 captions to the
+same depth would take about five times the steps (about 6.5 h, $26), and the characters outside Jōyō
+are the dense ones the author found too intricate. Cost: about 80 minutes on the H100 already
+running, about $5.5.
