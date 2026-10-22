@@ -421,3 +421,22 @@ so the run should cost about the same, near $6.
   to a new L40S pod (b6kv4sj0wclipo, $1.09/h) that draws the 720 candidates in about 7 minutes. Lesson
   kept for every later run: the training script itself launches what follows and the pod stops when
   the work ends, so no waiting loop on the laptop ever holds a GPU open.
+
+**D17. The keep test answers no, and arm 6 looks for the point where the word still shows.** The
+author stopped the keep test at ten words: he kept exactly one glyph per word, about ten seconds
+each, which is choosing the least bad, and said they have nothing to do with the words. Arm 5 fixed
+two of his three complaints (the calligraphy is beautiful and twelve candidates differ a lot) and
+not the one that matters: the link to the word. Reading: 8,000 steps of batch 32 is about 25 passes
+over the 10,384 characters, with cross-attention at five times the base rate; the model learned to
+draw kanji so well that every prompt now lands on a plausible kanji, and what SD 1.5 knew about how
+a skyscraper or a Pikachu looks has been trained out. enpitsu's glyphs look like the middle of that
+road: enough training for kanji strokes, little enough for the picture of the word to leak into the
+shape. Weight interpolation between base SD and arm 5 would test this for free, but arm 5 predicts
+velocity on a zero-SNR schedule and base SD predicts noise, so the mix is incoherent. Arm 6
+instead: the same brush data, SD's own objective (noise, default schedule), lr 1e-5 everywhere,
+3,000 steps, and every 250 steps the ten probe words (`outputs/keep/probe.txt`: enpitsu's seven
+and three more no dictionary names) drawn four times, with the U-Net of each point kept. The
+result is a scale from SD's picture to a kanji, and the author picks where the word can still be
+felt; that point is the model. Why this and not more data or another base model: it is the one
+explanation that also accounts for enpitsu, and it costs one short run (H100, about 45 minutes, about
+$3). The pod stops itself when the results are fetched or 30 minutes after the end.
