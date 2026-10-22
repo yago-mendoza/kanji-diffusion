@@ -411,3 +411,13 @@ so the run should cost about the same, near $6.
   style is already there, backgrounds white, and water gives 氵 in both samples. On the H100 the run
   goes at about 9 minutes per 1,000 steps (8,000 in about 74 minutes, about $5). When it ends, the pod
   draws the keep test's 720 candidates by itself (`outputs/keep/gen_keep.py`).
+- Arm 5 at 8,000 steps (`journal/arm5/step008000.png`): loss 0.15, finished at 17:50 UTC. Strokes are
+  clean brush, the fake characters hold together and the radicals land where the meaning asks (魚 for
+  fish, 鳥 for bird, 氵 for water, 火 for fire).
+- What went wrong after it: the loop that was to launch the candidates never saw the end of training
+  and failed silently, so the H100 sat idle for 2.3 hours (about $9) until the account balance ran out
+  and RunPod stopped it (15.26 $ for the pod in all). Its host then gave the GPU away, as with the
+  first pod. Recovery: the pod started with zero GPUs to reach its disk, the pipeline copied straight
+  to a new L40S pod (b6kv4sj0wclipo, $1.09/h) that draws the 720 candidates in about 7 minutes. Lesson
+  kept for every later run: the training script itself launches what follows and the pod stops when
+  the work ends, so no waiting loop on the laptop ever holds a GPU open.
