@@ -5,13 +5,13 @@
 <h1 align="center">kanji-diffusion</h1>
 
 <p align="center">
-  A small latent diffusion model that invents kanji for English words.<br>
-  Stable Diffusion's recipe at 64 pixels, trained from scratch on a laptop CPU overnight.
+  Fake kanji for English words, reproducing enpitsu's 2023 model.<br>
+  Stable Diffusion 1.5 fine-tuned on a rented H100, after a small latent diffusion model trained from scratch on a laptop CPU.
 </p>
 
 <p align="center">
   <b>A side project of <a href="https://infraphysics.net">InfraPhysics</a>.</b>
-  Every design decision, the evaluation and the second arm on a rented GPU are written up at
+  Every design decision, the nine training arms and the final glyphs are written up at
   <a href="https://infraphysics.net/lab/projects/kanji-diffusion"><b>infraphysics.net/lab/projects/kanji-diffusion</b></a>
 </p>
 
