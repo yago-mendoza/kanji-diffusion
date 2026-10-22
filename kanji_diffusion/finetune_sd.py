@@ -22,6 +22,7 @@ from diffusers import (AutoencoderKL, DDIMScheduler, DDPMScheduler, DPMSolverMul
                        UNet2DConditionModel)
 from transformers import CLIPTextModel, CLIPTokenizer
 
+from .lora import add_lora, fused, lora_state
 from .train import DEMO_PROMPTS, lr_at
 
 
@@ -124,6 +125,8 @@ def main() -> None:
     ap.add_argument("--probe-guidance", type=float, nargs="+", default=[5.0])
     ap.add_argument("--probe-sizes", type=int, nargs="+", help="resolutions to draw the probe words at (default: the data's)")
     ap.add_argument("--save-unets", action="store_true", help="keep the EMA U-Net of every save, so any point can be chosen afterwards")
+    ap.add_argument("--lora", type=int, default=0, help="train a LoRA of this rank on the attention instead of the whole U-Net")
+    ap.add_argument("--lora-alpha", type=float, help="LoRA scale numerator (default: the rank, so the update is scaled by 1)")
     args = ap.parse_args()
 
     assert torch.cuda.is_available(), "fine-tuning Stable Diffusion needs a GPU"
@@ -144,6 +147,7 @@ def main() -> None:
     unet = (UNet2DConditionModel.from_pretrained(args.init_unet) if args.init_unet
             else UNet2DConditionModel.from_pretrained(args.model, subfolder="unet")).float().to(device)
     unet.enable_gradient_checkpointing()
+    lora_params = add_lora(unet, args.lora, args.lora_alpha or args.lora) if args.lora else []
     sched = DDPMScheduler.from_pretrained(args.model, subfolder="scheduler",
                                           **({"prediction_type": "v_prediction"} if args.v_prediction else {}),
                                           **({"rescale_betas_zero_snr": True, "timestep_spacing": "trailing"} if args.zero_snr else {}))
@@ -189,6 +193,11 @@ def main() -> None:
     xattn = [p for n, p in unet.named_parameters() if ".attn2." in n]
     rest = [p for n, p in unet.named_parameters() if ".attn2." not in n]
     groups = [{"params": rest, "base": args.lr}, {"params": xattn, "base": args.lr_xattn or args.lr}]
+    if lora_params:
+        # Only the low-rank updates train; the pretrained weights stay frozen.
+        groups = [{"params": lora_params, "base": args.lr}]
+    trainable = [p for g in groups for p in g["params"]]
+    ema_pairs = [(pe, p) for pe, p in zip(ema.parameters(), unet.parameters()) if p.requires_grad]
     if text_params:
         groups.append({"params": text_params, "base": args.lr_text})
     opt = torch.optim.AdamW(groups, lr=args.lr, weight_decay=1e-2)
@@ -262,10 +271,10 @@ def main() -> None:
         loss = F.mse_loss(out.float(), target)
         opt.zero_grad(set_to_none=True)
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(list(unet.parameters()) + text_params, 1.0)
+        torch.nn.utils.clip_grad_norm_(trainable + text_params, 1.0)
         opt.step()
         with torch.no_grad():
-            for pe, p in zip(ema.parameters(), unet.parameters()):
+            for pe, p in ema_pairs:
                 pe.lerp_(p, 1 - min(args.ema, (1 + step) / (10 + step)))
         running = loss.item() if running is None else 0.98 * running + 0.02 * loss.item()
         if step % 25 == 0:
@@ -279,8 +288,11 @@ def main() -> None:
             if args.probe:
                 draw_probes(sampling_unet, sampling_text, step)
             if args.save_unets:
-                sampling_unet.to(torch.float16).save_pretrained(args.out / f"unets/step{step:06d}")
+                (fused(sampling_unet) if lora_params else sampling_unet).to(torch.float16).save_pretrained(args.out / f"unets/step{step:06d}")
                 sampling_unet.to(dtype)
+            if lora_params:
+                (args.out / "lora").mkdir(exist_ok=True)
+                torch.save(lora_state(sampling_unet), args.out / f"lora/step{step:06d}.pt")
             line = f"  caption gain {100 * caption_gain(sampling_unet):.1f}%"
             if fidelity:
                 f1, var = fidelity(sampling_unet, vae, sampling_text, tokenizer, size)
@@ -290,7 +302,7 @@ def main() -> None:
                         **({"text": text_encoder.state_dict()} if text_params else {})}, state_path)
             print(f"saved samples and state at step {step}{line}", flush=True)
 
-    pipe = StableDiffusionPipeline(vae=vae, text_encoder=text_encoder.to(torch.float16), tokenizer=tokenizer, unet=ema.to(torch.float16),
+    pipe = StableDiffusionPipeline(vae=vae, text_encoder=text_encoder.to(torch.float16), tokenizer=tokenizer, unet=(fused(ema) if lora_params else ema).to(torch.float16),
                                    scheduler=sampler(),
                                    safety_checker=None, feature_extractor=None, requires_safety_checker=False)
     pipe.to(torch.float16).save_pretrained(args.out / "pipeline")
