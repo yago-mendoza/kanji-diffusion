@@ -226,8 +226,8 @@ def main() -> None:
     t0, running = time.time(), None
     if args.probe and start == 1:
         # Step 0: what the untouched model draws for the probe words, the far end of the scale.
-        probe = [w.strip() for w in args.probe.read_text(encoding="utf-8").splitlines() if w.strip()]
-        sample_sheet(copy.deepcopy(ema).to(dtype).eval(), vae, copy.deepcopy(text_encoder).to(dtype).eval(), tokenizer, probe,
+        probe_words = [w.strip() for w in args.probe.read_text(encoding="utf-8").splitlines() if w.strip()]
+        sample_sheet(copy.deepcopy(ema).to(dtype).eval(), vae, copy.deepcopy(text_encoder).to(dtype).eval(), tokenizer, probe_words,
                      args.out / "probe/step000000.png", n=4, guidance=args.probe_guidance, size=size)
     for step in range(start, args.steps + 1):
         idx = torch.multinomial(weights, args.batch, replacement=True)
@@ -270,8 +270,8 @@ def main() -> None:
             sampling_text = copy.deepcopy(text_encoder).to(dtype).eval()
             sample_sheet(sampling_unet, vae, sampling_text, tokenizer, DEMO_PROMPTS, args.out / f"samples/step{step:06d}.png", size=size)
             if args.probe:
-                probe = [w.strip() for w in args.probe.read_text(encoding="utf-8").splitlines() if w.strip()]
-                sample_sheet(sampling_unet, vae, sampling_text, tokenizer, probe, args.out / f"probe/step{step:06d}.png",
+                probe_words = [w.strip() for w in args.probe.read_text(encoding="utf-8").splitlines() if w.strip()]
+                sample_sheet(sampling_unet, vae, sampling_text, tokenizer, probe_words, args.out / f"probe/step{step:06d}.png",
                              n=4, guidance=args.probe_guidance, size=size)
             if args.save_unets:
                 sampling_unet.to(torch.float16).save_pretrained(args.out / f"unets/step{step:06d}")
