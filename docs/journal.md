@@ -569,3 +569,25 @@ Pod `7no47mz7xdcisf` (H100 SXM, secure, US-MO-1, $3.99/h; community stock was go
 Jōyō glyphs at 256, cross-attention 1e-4, lr 1e-5 elsewhere, batch 32, 16,000 steps, probes of
 hardmaru's 25 words every 2,000, then 24 samples of each of 50 words (his 25 and 25 of mine,
 `outputs/keep/extra_words.txt`) for picking by eye (`outputs/keep/gallery.py`).
+
+**D23. Arm 9 binds at 256 px, then copies the dictionary; the final model is step 6,000.** Arm 9
+ran 16,000 steps at about 320 steps a minute (about 100 at 512 px). Caption gain every 2,000 steps:
+6.1, 25.1, 57.0, 78.2, 90.0, 95.0, 96.9, 97.8%, where arm 8 had 1.8, 11.2, 22.8, 36.8 at the same
+steps, so 256 px is cheaper per step and also binds faster per step. The gallery of the final model
+(24 seeds, 50 words) was a surprise: every word with a kanji came out as that kanji (水 Water, 死 Death,
+電 Electricity, 戦 War, 愛 Love), and words without one mostly settled on one real character (削 for
+Airplane in 24 of 24). The probe sheets (`journal/arm9/probe_step006000.png` against
+`probe_step016000.png`) showed the band: from 4,000 to 8,000 steps the glyphs are new characters
+built on the word's component (氵 or 氺 for Water, 鬼 for Ghost, 金 for Gold); from 10,000 the real
+character replaces them. Caption gain measures reproduction of the training captions, and past about
+80% that is the opposite of inventing. Lesson: decide what a metric is for before maximising it; the
+stopping point has to be chosen by looking.
+Only the final model had been saved, so arm 9b reran the recipe to 8,000 steps keeping the U-Net at
+every 1,000 (53 minutes): gain 0.5, 5.2, 11.4, 24.6, 37.8, 54.9, 67.9, 80.3%, within three points of
+arm 9 (same seed, so this shows run-to-run noise only). Galleries at 5,000 to 8,000. Mean pairwise
+similarity of the 24 samples of a word (64 px, cosine on ink): 0.569 at 5,000, 0.594 at 6,000, 0.633
+at 7,000, 0.679 at 8,000, 0.793 at 16,000; words whose samples are nearly one image (above 0.9): 0, 0,
+2, 7, 13 of 50. Step 6,000 (gain 55%) is the final model: new characters, the meaning in one
+component, and 王 itself for Elon Musk in two seeds, as in hardmaru's image
+(`journal/arm9/arm9-invent-vs-recall.png`, `arm9-hardmaru-vs-mine.png`). The U-Nets of 6,000 and
+7,000 and the 16,000 pipeline were downloaded and the pod terminated (2 h 41 min, about $11).
