@@ -120,6 +120,9 @@ def main() -> None:
     ap.add_argument("--kanjivg", type=Path, default=Path("data/raw/kanjivg.xml.gz"), help="stroke data, for --simple-boost")
     ap.add_argument("--train-text-layers", type=int, default=0, help="unfreeze the last N CLIP text layers")
     ap.add_argument("--lr-text", type=float, default=2e-6)
+    ap.add_argument("--probe", type=Path, help="words the data never names, drawn at every save to watch the picture turn into a kanji")
+    ap.add_argument("--probe-guidance", type=float, default=5.0)
+    ap.add_argument("--save-unets", action="store_true", help="keep the EMA U-Net of every save, so any point can be chosen afterwards")
     args = ap.parse_args()
 
     assert torch.cuda.is_available(), "fine-tuning Stable Diffusion needs a GPU"
@@ -221,6 +224,11 @@ def main() -> None:
         return (errs[1] - errs[0]) / errs[1]
     unet.train()
     t0, running = time.time(), None
+    if args.probe and start == 1:
+        # Step 0: what the untouched model draws for the probe words, the far end of the scale.
+        probe = [w.strip() for w in args.probe.read_text(encoding="utf-8").splitlines() if w.strip()]
+        sample_sheet(copy.deepcopy(ema).to(dtype).eval(), vae, copy.deepcopy(text_encoder).to(dtype).eval(), tokenizer, probe,
+                     args.out / "probe/step000000.png", n=4, guidance=args.probe_guidance, size=size)
     for step in range(start, args.steps + 1):
         idx = torch.multinomial(weights, args.batch, replacement=True)
         z0 = latents[idx.to(device)]
@@ -261,6 +269,13 @@ def main() -> None:
             sampling_unet = copy.deepcopy(ema).to(dtype).eval()
             sampling_text = copy.deepcopy(text_encoder).to(dtype).eval()
             sample_sheet(sampling_unet, vae, sampling_text, tokenizer, DEMO_PROMPTS, args.out / f"samples/step{step:06d}.png", size=size)
+            if args.probe:
+                probe = [w.strip() for w in args.probe.read_text(encoding="utf-8").splitlines() if w.strip()]
+                sample_sheet(sampling_unet, vae, sampling_text, tokenizer, probe, args.out / f"probe/step{step:06d}.png",
+                             n=4, guidance=args.probe_guidance, size=size)
+            if args.save_unets:
+                sampling_unet.to(torch.float16).save_pretrained(args.out / f"unets/step{step:06d}")
+                sampling_unet.to(dtype)
             line = f"  caption gain {100 * caption_gain(sampling_unet):.1f}%"
             if fidelity:
                 f1, var = fidelity(sampling_unet, vae, sampling_text, tokenizer, size)
