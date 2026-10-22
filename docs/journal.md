@@ -551,3 +551,21 @@ Guidance 3 and 7.5 give almost the same glyph per seed, so guidance is not a lev
 Because the gain has not levelled off, the next step is more of the same: arm 8 resumed to 16,000
 steps (about 70 minutes, about $5), probes every 1,000. Why this and not a new idea: it is the only
 quantity the evidence says is short, and the curve gives a direct prediction to check it against.
+
+**D22. The balance ran out at step 12,950, and arm 9 moves to 256 px.** The continuation of arm 8
+stopped at about 18:00 local: the account balance ran out. My watch loop missed it for an hour, because
+it took the exit code of `tr` at the end of the pipe, not of `ssh`, so every refused connection
+counted as a success; the loop now reads ssh's own code. After the author topped up, the pod would not
+start: its host's H100 had been taken (the same trap as arm 5), and the state of step 12,000 is locked
+on that host's disk. Three ways on, with the reasons:
+- Wait for the host. Free, but of unknown length, and the author is away for two hours.
+- Retrain arm 8 at 512 px on a new pod to 16,000 steps: about 2.7 hours, about $11 of the $17 left.
+- Arm 9: the same recipe at 256 px on a new pod. A 256 px latent is 32×32 instead of 64×64, a quarter
+  of the positions, so each step should cost roughly a third to a quarter; 256 px is also the size of
+  enpitsu's demo, and it is the one lever of the four lessons (journal D21 and the author's notes) not
+  yet measured. A 512-trained model drew crops at 256 (D18), which a model trained at 256 should not.
+Arm 9 was chosen: it costs the least, answers a question still open, and gives the gallery either way.
+Pod `7no47mz7xdcisf` (H100 SXM, secure, US-MO-1, $3.99/h; community stock was gone at create time):
+Jōyō glyphs at 256, cross-attention 1e-4, lr 1e-5 elsewhere, batch 32, 16,000 steps, probes of
+hardmaru's 25 words every 2,000, then 24 samples of each of 50 words (his 25 and 25 of mine,
+`outputs/keep/extra_words.txt`) for picking by eye (`outputs/keep/gallery.py`).
