@@ -450,3 +450,44 @@ $3). The pod stops itself when the results are fetched or 30 minutes after the e
   barely steers which kanji comes out. The author marks the scale page
   (https://claude.ai/artifact/PNV1ttNgd6n3qR6xJHeDhK) before anything else is decided. The pod
   (yvekpoa70baehw) is stopped with the thirteen U-Nets on its disk; about $3 for the run.
+
+**D18. Looking at the reference itself, and what it says the recipe is.** The author's verdict on arm
+6 was *not bad*, with three objections: the glyphs that remain are far too intricate, early stages
+invent characters out of the picture, and the real test is a comparison with the image hardmaru
+posted. That image (`journal/ref/hardmaru-2023-01.jpg`, from https://x.com/hardmaru/status/1611237067589095425)
+had never been looked at in this project, only described, and it contradicts three of my readings:
+- It is not brush calligraphy. Every glyph is a clean Mincho face, black on white, the glyph at about
+  three quarters of the frame. The brush font of arms 5 and 6 came from my reading of *caligrafía
+  bonita*, not from the reference.
+- The glyphs are simple: one or two components, about 4 to 13 strokes (王 for Elon Musk, 电 for God,
+  扌 with 田 for iPhone). Ours carry 20 to 30. The training set is not the cause: the median
+  KANJIDIC character with an English meaning has 12 strokes (2,136 Jōyō: 10; the other 8,248: 13).
+- Many outputs are real or nearly real characters, and the link to the word sits in the choice of one
+  component: 金 for Gold and for the Skyscraper, 氵 for Water, 王 for Elon Musk (王 in KANJIDIC:
+  *king, rule, magnate*).
+That last point names a mechanism: a model that learns caption to glyph faithfully, asked for a new
+word, lands near the glyphs whose meanings are nearest in its text space, sometimes merging two. It
+was tested without any diffusion (`outputs/keep/nearest.py`, SD's own CLIP text encoder, each
+KANJIDIC sense separately): Water gives 水 氵, Fire 火 灬, Wood 木, Gold 金, Soil 土, Ghost 鬼,
+Skyscraper 閣 塔 (*tower*), Elon Musk 夫 帝 (*sovereign*), Nicholas Cage 籠 (*cage*). The semantic link the
+author wants already exists in the text space; what our models lack is the faithfulness that carries
+it into the glyph (caption gain 7% at best in attempt 2, -0.2% in arm 6) and a style simple enough to
+read the component.
+A literature pass (subagent, summary kept in the session) found no paper that generates new kanji
+from an English meaning; it found enpitsu's own training set, public on Hugging Face as
+`epts/kanji-full`: 10,358 Mincho glyphs at 512 px, captioned with the raw KANJIDIC meanings. His
+setup beyond that (steps, rate, guidance) is unpublished; his demo Space (`epts/kanji`) fixes the output
+at 256 px with guidance 7.5 and DPM-Solver, 25 steps, and his model is no longer downloadable.
+Free test of the 256 px lever on arm 5 (laptop CPU, `outputs/sweep/arm5_s256_g7.5.png`): a model
+trained at 512 does not draw a small glyph at 256, it draws a close-up of a large one; the fragment it
+chooses is the semantic radical (drops of 氵 for Water), which agrees with the mechanism, but the
+lever needs a model that works at that size.
+Arm 7, the faithful reproduction: his data unchanged (`kanji_diffusion/prepare_epts.py`), SD 1.5 with
+its own objective (noise prediction, default schedule, DPM-Solver to sample), lr 1e-5 on every
+layer, 10% empty captions, 5,000 steps of batch 32 (about 15 passes), and at every 1,000 steps
+hardmaru's 25 words drawn four times at guidance 3 and 7.5 and at 512 and 256 px, with the U-Net kept.
+One run answers when the meaning arrives (steps), whether guidance commits the glyph to fewer
+components (3 against 7.5) and whether the smaller canvas simplifies it, side by side with the
+reference. Why this before any idea of my own: three arms of mine (5, 6 and the font choice) were
+built on a description of the reference instead of the reference; the cheapest information now is
+what his exact recipe gives. Cost: H100, about 50 minutes, about $3.5.
