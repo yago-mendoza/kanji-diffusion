@@ -5,6 +5,7 @@
 #   12b from Stable Diffusion 1.5 (keeps more of what things look like, arm 6).
 # Arm 9's recipe otherwise (256 px, cross-attention 1e-4, the rest 1e-5). U-Net and probes every 1,000 steps.
 # Usage: bash arm12.sh STEPS   (the arm 11 U-Net must be in /workspace/init/arm11_24k)
+# /workspace is a network volume: everything here outlives the pod (the first run lost its results with the pod's disk).
 STEPS=${1:-8000}
 cd /workspace
 [ -d kanji-diffusion ] || git clone -q https://github.com/yago-mendoza/kanji-diffusion.git
@@ -20,4 +21,9 @@ until [ -f /workspace/init/arm11_24k/.done ]; do sleep 5; done   # the U-Net upl
 python -m kanji_diffusion.finetune_sd $COMMON --out runs/arm12a --init-unet /workspace/init/arm11_24k
 rm -f runs/arm12a/state.pt; echo ARM12A_DONE
 python -m kanji_diffusion.finetune_sd $COMMON --out runs/arm12b
-echo ARM12B_DONE
+rm -f runs/arm12b/state.pt; echo ARM12B_DONE
+# The comparison gallery, drawn here on the GPU before the pod stops: 30 words, 12 samples, both starts, four points each.
+for r in arm12a arm12b; do for s in 002000 004000 006000 008000; do
+  python outputs/keep/gallery_hf.py runs/$r/unets/step$s runs/gallery/$r-$s outputs/keep/obc_gallery.txt --n 12
+done; done
+tar cf /workspace/gallery.tar -C runs gallery && echo GALLERY_READY
