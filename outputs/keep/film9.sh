@@ -3,6 +3,7 @@
 # character to dictionary kanji can be shown as continuous frames. Runs after arm 12 on the same pod.
 cd /workspace/kanji-diffusion
 until grep -qE "GALLERY_READY|Traceback" /workspace/arm12.log; do sleep 30; done
+rm -rf runs/arm12?/unets/step00[1357]000   # room on the volume; the even steps stay
 git pull -q && git log --oneline -1
 python - <<'PY'
 import re, gzip, torch
