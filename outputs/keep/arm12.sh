@@ -16,6 +16,7 @@ rm -rf data/raw/obc data/raw/epts-kanji-full.parquet   # 50 GB disk: keep room f
 df -h /workspace | tail -1
 COMMON="--data data/obc_mix256.pt --eval-data /none --steps $STEPS --lr 1e-5 --lr-xattn 1e-4 --constant --save-every 1000
   --save-unets --probe outputs/keep/obc_probe.txt --probe-guidance 7.5"
+until [ -f /workspace/init/arm11_24k/.done ]; do sleep 5; done   # the U-Net upload runs alongside the data prep
 python -m kanji_diffusion.finetune_sd $COMMON --out runs/arm12a --init-unet /workspace/init/arm11_24k
 rm -f runs/arm12a/state.pt; echo ARM12A_DONE
 python -m kanji_diffusion.finetune_sd $COMMON --out runs/arm12b
