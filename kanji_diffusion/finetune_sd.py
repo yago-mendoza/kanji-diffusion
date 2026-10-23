@@ -123,6 +123,7 @@ def main() -> None:
     ap.add_argument("--lr-text", type=float, default=2e-6)
     ap.add_argument("--probe", type=Path, help="words the data never names, drawn at every save to watch the picture turn into a kanji")
     ap.add_argument("--probe-guidance", type=float, nargs="+", default=[5.0])
+    ap.add_argument("--probe-every", type=int, help="also draw the probe sheets every N steps between saves, for a film of training")
     ap.add_argument("--probe-sizes", type=int, nargs="+", help="resolutions to draw the probe words at (default: the data's)")
     ap.add_argument("--save-unets", action="store_true", help="keep the EMA U-Net of every save, so any point can be chosen afterwards")
     ap.add_argument("--lora", type=int, default=0, help="train a LoRA of this rank on the attention instead of the whole U-Net")
@@ -284,6 +285,8 @@ def main() -> None:
         if step % 25 == 0:
             eta = (time.time() - t0) / (step - start + 1) * (args.steps - step)
             print(f"step {step:6d}  loss {running:.4f}  lr {opt.param_groups[0]['lr']:.2e}  eta {eta / 60:5.0f}min", flush=True)
+        if args.probe and args.probe_every and step % args.probe_every == 0 and step % args.save_every and step != args.steps:
+            draw_probes(copy.deepcopy(ema).to(dtype).eval(), copy.deepcopy(text_encoder).to(dtype).eval(), step)
         if step % args.save_every == 0 or step == args.steps:
             # Sample from a bf16 copy: casting the EMA itself rounded its weights at every sheet (attempt 1's bug).
             sampling_unet = copy.deepcopy(ema).to(dtype).eval()
