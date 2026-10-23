@@ -674,3 +674,5 @@ kept (the YouTube button, the Switch box, Elon Musk's face); three or four read 
 the thing (Skyscraper's 宀 over a grid tower, iPhone's character in a rounded square, a helmet-shaped
 昌 for Gundam). Without a clean silhouette to start from it yields more noise than finds, so it is not
 taken to the blind test.
+
+Next, the rematch. A picker page holds the 24 samples of arm 11 at step 24,000 for each of hardmaru's 25 words, with his glyph beside them. A person picks the best of each, as enpitsu's own samples were picked by a person. Those picks then face his in a second blind test, built like the first. The pick has to come from someone other than me, or the test would measure my taste instead of the model.
