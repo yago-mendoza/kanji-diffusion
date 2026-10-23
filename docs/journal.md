@@ -617,3 +617,46 @@ A rank-64 update on the attention learns the look in minutes but binds words to 
 times slower than the full fine-tune, so it cannot yet test whether keeping the prior brings the
 picture. Not run: a longer 10b, a higher rank, or the text encoder. Both pods' galleries, LoRA weights
 and probes were downloaded and the pod terminated (about 2 h, about $2.3).
+
+**D25. Rethinking before spending: the gap with enpitsu is the data, not the kind of training.** Asked
+to review the whole project before the next run, three readings changed:
+- enpitsu almost certainly fine-tuned the whole U-Net with the standard script, as arms 7 to 9 did, so
+  full fine-tuning against LoRA cannot be what separates his glyphs from ours. The plan to train the
+  cross-attention alone (keeping the rest of Stable Diffusion frozen) was dropped for that reason.
+- What does separate us: he trained on all 10,358 glyphs, we on the 1,937 Jōyō since arm 8. The subset
+  was chosen at 512 px, where the whole set would have needed about 6.5 h and $26 to bind (D20). At
+  256 px a step costs a third and binds about twice as fast, so that reason no longer holds, and the
+  whole set brings the rare meanings (*germanium*, *tower*, *cage*) that words like Skyscraper and
+  iPhone land near. The reference itself came from a whole-set model and is simple, so the whole set
+  does not force dense glyphs once the text binds (D20: arm 7's density was the unconditional average).
+- The blind test of D24 is the metric from here on (the fifth lesson: caption gain measures something
+  else), ideally with more than one judge.
+Arm 11: arm 9's recipe on the whole set at 256 px (cross-attention 1e-4, the rest 1e-5, batch 32),
+24,000 steps, U-Net kept every 2,000, probes every 2,000. Pod `w9uhcxctihuja9` (H100 SXM, secure,
+US-MO-1, $3.99/h; no community H100 in stock), about 85 minutes, about $6. Plan: galleries at the saved
+steps whose gain falls in the band where arm 9b invented (about 45 to 70%).
+A check that failed and was dropped: whether hardmaru's 25 glyphs are real rare characters, by nearest
+neighbour (cosine on 48 px ink, bounding boxes stretched to square) against the 10,384 font glyphs of
+`data/kanji64_font.pt`. The self-check gave 0.49 between his 王 and the font's 王, so the measure does not
+recognise identical characters (the square stretch and the thresholds distort them); its results say
+nothing and were not used.
+Side experiment, no GPU: img2img from base Stable Diffusion's own picture of a word (the step-0 probe
+cell, contrast stretched) with the step-6,000 model of arm 9b, on CPU (about 35 s an image). At strength
+0.75 the picture is gone and a generic kanji comes out; at 0.55 Skyscraper becomes a 宀 roof over a grid
+tower, a character that looks like the thing (`runs/img2img`), with bars of the photo's background left
+at the sides; Pikachu keeps its ears and is not yet a kanji. Automatic silhouettes (binarise, largest
+blob, centred) picked frames instead of objects for iPhone and Switch and were dropped. Running: ten
+pictorial words, four starting pictures each, strengths 0.5 and 0.6. This is a different method from
+enpitsu's (the picture guides the glyph), so it has to be reported as such if it wins.
+An idea from the author, not yet tried: generate strokes instead of pixels, with a pen effect. The
+precedent is hardmaru's own sketch-rnn (2015) on KanjiVG, which we already have. The reading kept for
+later: a stroke model alone has the same problem of tying an English word to strokes, with fewer
+examples; a component version (a language model picks parts and a layout, e.g. 金 left and 高 right for
+Skyscraper; a renderer places the KanjiVG strokes of each part in its slot with a pen effect; optionally a
+small stroke model deforms the parts toward the thing) would be clean and legible by construction and
+needs no GPU. D6 and D13 tried composition through the diffusion model, which executed the designs
+badly and lost every duel (D15); a renderer executes them exactly. The risk is the one D15 named: the
+author prefers strange glyphs to dictionary-correct ones.
+Also recorded: publishing the D24 blind test reused the scratchpad path of the earlier blind test, so
+it replaced that artifact's page; the earlier votes are still in its database and the old page in its
+version history.
