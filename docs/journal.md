@@ -653,3 +653,24 @@ him and is not to be pursued.
 Also recorded: publishing the D24 blind test reused the scratchpad path of the earlier blind test, so
 it replaced that artifact's page; the earlier votes are still in its database and the old page in its
 version history.
+
+**D26. Arm 11: on the whole set the meaning arrives as enpitsu's kind of pun; img2img mostly fails.**
+Caption gain every 2,000 steps: 2.9, 7.8, 9.8, 12.3, 15.3, 16.7, 17.8, 21.2, 25.0, 26.2, 29.5, 34.4%
+(91 minutes; arm 9 on the Jōyō set had 78% at 8,000), slower per step as five times the captions
+predict. What the low gain hides: by step 8,000 the component was already in place for the plain
+words (氵 Water, 火 Fire, 木 Wood 4 of 4, 金 Gold 3 of 4, and 犭 for Animal, a radical the Jōyō arms
+never produced), and by 16,000 (`journal/arm11/probe_step016000.png`) the choices read as the
+reference's do, through a neighbour meaning: 竹 for Nicholas Cage in 4 of 4 (the radical of 籠, *cage*),
+氵 for Deep Learning in 4 of 4 (*deep*), 食 for Snack, 山 for Skyscraper (*tall*) in 3 of 4. Galleries of
+hardmaru's 25 words, 24 seeds, at 16,000, 20,000 and 24,000 (`journal/arm11/arm11-step16000.png`,
+`arm11-step24000.png`): 山 for Skyscraper in 7 of 8 shown at 24,000, 木 for Nicholas Cage (檻 is *cage*
+too); Pikachu, iPhone, YouTube and God stay arbitrary, Elon Musk no longer lands on 王. Glyphs are
+denser than the reference's. The whole set, not the training method, was the missing piece for the
+pun-like choices; whether that wins against enpitsu is for the blind test, not for this reading.
+The U-Net at 24,000 was downloaded; the pod was terminated after about 1 h 45 min (about $7).
+img2img (D25) finished: 80 images, ten pictorial words, four starting pictures, strengths 0.5 and 0.6
+(`runs/img2img`). Most come out half kanji and half photograph, with the picture's background and frame
+kept (the YouTube button, the Switch box, Elon Musk's face); three or four read as a kanji shaped like
+the thing (Skyscraper's 宀 over a grid tower, iPhone's character in a rounded square, a helmet-shaped
+昌 for Gundam). Without a clean silhouette to start from it yields more noise than finds, so it is not
+taken to the blind test.
