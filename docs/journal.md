@@ -648,15 +648,8 @@ at the sides; Pikachu keeps its ears and is not yet a kanji. Automatic silhouett
 blob, centred) picked frames instead of objects for iPhone and Switch and were dropped. Running: ten
 pictorial words, four starting pictures each, strengths 0.5 and 0.6. This is a different method from
 enpitsu's (the picture guides the glyph), so it has to be reported as such if it wins.
-An idea from the author, not yet tried: generate strokes instead of pixels, with a pen effect. The
-precedent is hardmaru's own sketch-rnn (2015) on KanjiVG, which we already have. The reading kept for
-later: a stroke model alone has the same problem of tying an English word to strokes, with fewer
-examples; a component version (a language model picks parts and a layout, e.g. 金 left and 高 right for
-Skyscraper; a renderer places the KanjiVG strokes of each part in its slot with a pen effect; optionally a
-small stroke model deforms the parts toward the thing) would be clean and legible by construction and
-needs no GPU. D6 and D13 tried composition through the diffusion model, which executed the designs
-badly and lost every duel (D15); a renderer executes them exactly. The risk is the one D15 named: the
-author prefers strange glyphs to dictionary-correct ones.
+The author asked, out of curiosity, about generating strokes instead of pixels; it was set aside by
+him and is not to be pursued.
 Also recorded: publishing the D24 blind test reused the scratchpad path of the earlier blind test, so
 it replaced that artifact's page; the earlier votes are still in its database and the old page in its
 version history.
