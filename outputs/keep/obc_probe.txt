@@ -1,0 +1,24 @@
+oracle bone script: Water
+oracle bone script: Fire
+oracle bone script: Fish
+oracle bone script: Bird
+oracle bone script: Mountain
+oracle bone script: Tree
+oracle bone script: Skyscraper
+oracle bone script: Pikachu
+oracle bone script: iPhone
+oracle bone script: Elon Musk
+oracle bone script: Ghost
+oracle bone script: Snack
+oracle bone script: Murloc
+oracle bone script: Face ID
+oracle bone script: Touch Grass
+oracle bone script: Mercedes G-Wagon
+oracle bone script: Death Note
+oracle bone script: NVIDIA
+oracle bone script: Coffee
+oracle bone script: Robot Dog
+Skyscraper
+Pikachu
+Fire
+Face ID

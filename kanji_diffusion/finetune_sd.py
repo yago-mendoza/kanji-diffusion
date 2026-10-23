@@ -159,6 +159,10 @@ def main() -> None:
     chars, images = data["chars"], data["images"]
     full = data["captions"]
     first = [c.split(", ")[0] for c in full]
+    if "prefix" in data:
+        # A style prefix per glyph ("oracle bone script: "), kept on both the full and the short caption.
+        full = [p + c for p, c in zip(data["prefix"], full)]
+        first = [p + c for p, c in zip(data["prefix"], first)]
     size = images.shape[-1]
     print(f"{len(chars)} kanji at {size}px, base {args.model}, prediction {pred}", flush=True)
 
@@ -177,7 +181,7 @@ def main() -> None:
 
     # Sampling weights: base characters (few strokes) are rare as recognisable components, so the model learns
     # their radicals before the characters themselves; --simple-boost shows them more often.
-    weights = torch.ones(len(chars))
+    weights = data["weights"].float().clone() if "weights" in data else torch.ones(len(chars))
     if args.simple_boost:
         from .prepare import read_strokes
         strokes = read_strokes(args.kanjivg)
