@@ -16,12 +16,18 @@
 </p>
 
 <p align="center">
-  <img src="docs/invented.png" width="720" alt="Three samples each for eight English words that have no kanji (pizza, internet, computer, Elon Musk, smartphone, coffee, algorithm, cryptocurrency), drawn black on white by the model: internet comes out under the gate radical 門, algorithm on the thread radical 糸">
+  <img src="docs/assets/picks-matrix.png" width="820" alt="A matrix of 24 framed fake kanji, each above an English word: Face ID built on 頁 (head), Murloc on 氵 (water), Touch Grass under 艹 (grass), Tesla Cybertruck as a 車 (vehicle), Regenerative Medicine under 疒 (illness), from Amani War Bear to Uncanny Valley">
 </p>
+
+<p align="center"><sub>One glyph per word, picked by the author from 24 samples of the Stable Diffusion fine-tune on all 10,358 kanji (arm 11).</sub></p>
 
 ---
 
 Ask it for *internet* and it draws a character under 門, the gate, with something of its own inside; ask for *algorithm* and it builds one on 糸, the thread. Neither character exists. The model has only ever seen real kanji, yet it has learned which component carries which meaning well enough to put together new ones. This README covers running it; the [write-up on infraphysics.net](https://infraphysics.net/lab/projects/kanji-diffusion) explains why each part is the size it is and measures the results against the training set, and a companion piece tells how the second arm was trained on [an A100 rented on RunPod from Claude Code](https://infraphysics.net/blog/bits2bricks/renting-a-gpu-on-runpod).
+
+<p align="center">
+  <img src="docs/invented.png" width="720" alt="Three samples each for eight English words that have no kanji (pizza, internet, computer, Elon Musk, smartphone, coffee, algorithm, cryptocurrency), drawn black on white by the small model: internet comes out under the gate radical 門, algorithm on the thread radical 糸">
+</p>
 
 ## Where the idea comes from
 
