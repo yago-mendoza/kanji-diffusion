@@ -11,7 +11,7 @@
 
 <p align="center">
   <b>A side project of <a href="https://infraphysics.net">InfraPhysics</a>.</b>
-  Every design decision, the nine training arms and the final glyphs are written up at
+  The whole story, failures included, is at
   <a href="https://infraphysics.net/lab/projects/kanji-diffusion"><b>infraphysics.net/lab/projects/kanji-diffusion</b></a>
 </p>
 
