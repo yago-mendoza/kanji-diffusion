@@ -6,7 +6,7 @@
 
 <p align="center">
   Fake kanji for English words, reproducing enpitsu's 2023 model.<br>
-  Stable Diffusion 1.5 fine-tuned on a rented H100, after a small latent diffusion model trained from scratch on a laptop CPU.
+  Stable Diffusion 1.5 fine-tuned on rented GPUs, after a small latent diffusion model trained from scratch on a laptop CPU.
 </p>
 
 <p align="center">
@@ -23,29 +23,51 @@
 
 ---
 
-Ask it for *internet* and it draws a character under 門, the gate, with something of its own inside; ask for *algorithm* and it builds one on 糸, the thread. Neither character exists. The model has only ever seen real kanji, yet it has learned which component carries which meaning well enough to put together new ones. This README covers running it; the [write-up on infraphysics.net](https://infraphysics.net/lab/projects/kanji-diffusion) explains why each part is the size it is and measures the results against the training set, and a companion piece tells how the second arm was trained on [an A100 rented on RunPod from Claude Code](https://infraphysics.net/blog/bits2bricks/renting-a-gpu-on-runpod).
-
-<p align="center">
-  <img src="docs/invented.png" width="460" alt="Three samples each for eight English words that have no kanji (pizza, internet, computer, Elon Musk, smartphone, coffee, algorithm, cryptocurrency), drawn black on white by the small model: internet comes out under the gate radical 門, algorithm on the thread radical 糸">
-</p>
+Ask it for *Face ID* and it draws a character built on 頁, the head; *Regenerative Medicine* comes out under 疒, the radical of illness. Neither character exists. The model is Stable Diffusion 1.5 fine-tuned on the 10,358 kanji of enpitsu's training set, each captioned with its English meanings, and it reads any English word through that dictionary. The [write-up on infraphysics.net](https://infraphysics.net/lab/projects/kanji-diffusion) tells the eleven training arms it took, and [`docs/journal.md`](docs/journal.md) logs every decision with what it cost.
 
 ## Where the idea comes from
 
-The model learns from
-the 6,413 characters that have both stroke data in [KanjiVG](https://kanjivg.tagaini.net)
-and English meanings in [KANJIDIC2](https://www.edrdg.org/wiki/index.php/KANJIDIC_Project),
-and then draws characters that never existed for prompts like *pizza*, *internet* or
-*Elon Musk*. The idea comes from a Stable Diffusion model trained on kanji images that
-[@hardmaru shared in January 2023](https://x.com/hardmaru/status/1611237067589095425), itself
-a modern take on his [2015 sketch-rnn fake kanji](https://blog.otoro.net/2015/12/28/recurrent-net-dreams-up-fake-chinese-characters-in-vector-format-with-tensorflow/),
-also trained on KanjiVG:
+In January 2023 [@hardmaru shared](https://x.com/hardmaru/status/1611237067589095425) a grid of kanji that do not exist, each drawn for an English word. The model behind it was enpitsu's (Hugging Face user [`epts`](https://huggingface.co/epts)), Stable Diffusion fine-tuned on [ten thousand kanji with their meanings](https://x.com/enpitsu/status/1610587513059684353). hardmaru had made fake kanji years before with [sketch-rnn](https://blog.otoro.net/2015/12/28/recurrent-net-dreams-up-fake-chinese-characters-in-vector-format-with-tensorflow/), stroke by stroke and with no word behind them. enpitsu never published how he trained, and his model can no longer be downloaded, so this repository rebuilds it from his data and that one image.
 
 <p align="center">
   <img src="docs/hardmaru_matrix.PNG" width="520" alt="The grid of fake kanji @hardmaru shared in January 2023, each under an English word such as Skyscraper, Pikachu, Elon Musk and YouTube">
 </p>
 
-This version follows the same architecture as Stable Diffusion at a size a laptop CPU can
-train overnight:
+Ten of those words, his glyph on top and two of mine from arm 9 below:
+
+<p align="center">
+  <img src="docs/assets/hardmaru-vs-mine.webp" width="560" alt="Ten labelled columns, each with one unframed glyph from enpitsu's model on top and two framed glyphs from arm 9 below">
+</p>
+
+## What it took
+
+Every guess I made about why it was not working, in the order they branched. A green tick held, an amber tilde half held, the struck-through ones were wrong:
+
+<p align="center">
+  <img src="docs/assets/guesses.webp" width="680" alt="A tree of twenty-one guesses, each with a green tick, an amber tilde or a red cross and a short reason; the wrong ones are struck through">
+</p>
+
+The turn came from copying enpitsu instead of inventing: his data with the standard recipe learned no meaning until each caption was seen often enough. Arm 9 trains on his glyphs of the Jōyō characters (about 2,100) at 256 px, with the cross-attention at ten times the learning rate of the rest, and its training shows the whole arc. Retrained to 10,000 steps with a sample every 25 steps, each word starts as Stable Diffusion's photograph of it, becomes a new character built on the word's part around step 5,000, and ends as the dictionary's own kanji:
+
+<p align="center">
+  <img src="docs/assets/arm9-film.gif" width="560" alt="An animation of eight words, Water to Elon Musk, each a photograph at step 0 that turns into a new character around step 5,000 and into a dictionary kanji by 10,000, with the step and a progress bar above">
+</p>
+
+The model invents only while it reads the word and has not yet settled on the dictionary: between 4,000 and 8,000 steps the caption gain climbs from 25% to 80% while the four seeds of a word still differ, and past 8,000 they converge on the same real kanji.
+
+<p align="center">
+  <img src="docs/assets/invention-window.png" width="640" alt="Two charts over training steps 0 to 10,000 with a shaded band from 4,000 to 8,000: caption gain rising to 90% on top, variety between seeds falling to 0.32 below, and three framed glyphs for Ghost: a photograph, an invented kanji, and 鬼">
+</p>
+
+In a blind test against the 25 glyphs hardmaru posted, a judge chose enpitsu's in 17 pairs and mine (arm 9, step 6,000) in 8. Arm 11 then trained the same recipe on all 10,358 characters, which brought the puns of the picks at the top.
+
+<p align="center">
+  <img src="docs/assets/blind-test.webp" width="680" alt="Twenty-five labelled pairs of glyphs, an unframed one from enpitsu's model beside a framed one from arm 9, with a red dot under the one the judge chose">
+</p>
+
+## The small model
+
+Before renting anything, the first arm kept Stable Diffusion's architecture at a size a laptop CPU can train overnight. It learns from the 6,413 characters that have both stroke data in [KanjiVG](https://kanjivg.tagaini.net) and English meanings in [KANJIDIC2](https://www.edrdg.org/wiki/index.php/KANJIDIC_Project):
 
 | Stage | Stable Diffusion 1.x | kanji-diffusion |
 |---|---|---|
@@ -57,8 +79,6 @@ train overnight:
 | Sampler | PNDM / DDIM | DPM-Solver++, classifier-free guidance |
 
 Everything runs on CUDA when it is available and falls back to the CPU otherwise.
-
-## How it works
 
 <p align="center">
   <img src="docs/assets/stages.webp" width="560" alt="Three panels: 1, the autoencoder learns to redraw the glyph for fish; 2, the denoiser learns to predict v from a noised latent while reading the frozen CLIP embedding of the word; 3, sampling starts from noise, runs 30 DPM-Solver++ steps with guidance w = 3 and decodes a new glyph">
@@ -74,25 +94,11 @@ classifier-free guidance, then decodes once.
   <img src="docs/assets/architecture.webp" width="560" alt="Feature-map diagram: (a) the 1.6M-parameter autoencoder from 64x64 down to a 16x16x4 latent and back; (b) the 17.4M-parameter U-Net at 16, 8 and 4 pixels, with ResBlocks, transformer blocks that cross-attend to the text, and skip connections">
 </p>
 
-<p align="center">
-  <img src="docs/paper/trajectory.png" width="720" alt="Four prompts, each shown as the model's estimate of the finished glyph at eight points of the 30 sampling steps">
-</p>
-
-<p align="center">
-  <img src="docs/paper/guidance_sweep.png" width="720" alt="Two charts: fidelity against variety for guidance scales from 0 to 8, and similarity of invented words to the training set against guidance">
-</p>
-
-The two diagrams are the redrawn versions from the write-up. `docs/paper_figures.py` draws all four figures from a trained run into `docs/paper/` (`pip install -e .[figures]`), the diagrams in a plainer style.
-
-## Results
-
 Trained for 16,000 steps on an 8-core laptop CPU (AMD Ryzen AI 7 PRO 450), about five hours
-for the denoiser and 45 minutes for the autoencoder.
-
-Words that have no kanji, each sample above the most similar of the 6,413 training
-characters (dimmed, with the similarity). The model reuses the components that fit the
-meaning (the gate 門 for *internet*, the thread 糸 for *algorithm*) and builds new
-characters with them:
+for the denoiser and 45 minutes for the autoencoder. Words that have no kanji, each sample
+beside the most similar of the 6,413 training characters (grey, with their ink overlap). The
+model reuses the components that fit the meaning (the gate 門 for *internet*, the thread 糸
+for *algorithm*) and builds new characters with them:
 
 <p align="center">
   <img src="docs/novel.png" width="560" alt="One sample for each of twelve invented words, framed, beside the most similar real training character in grey with its ink overlap, between 0.35 and 0.64">
@@ -116,33 +122,8 @@ nearest training glyph (ink overlap with strokes thickened by one pixel). Its re
 the training set itself: the nearest *other* real kanji reaches 0.57 at the median and 0.78
 at the 99th percentile. None of the 96 samples goes past that 99th percentile, so the model
 draws new characters rather than returning ones it was shown. The figures are produced by
-`docs/figures.py`.
-
-## Second arm: Stable Diffusion 1.5
-
-The write-up asks what changes when the model starts from one that has seen the world. That arm fine-tunes Stable Diffusion 1.5 on rented GPUs, over a dozen runs that [`docs/journal.md`](docs/journal.md) logs one decision at a time. The first fine-tune drew busier, darker glyphs than the small model, on grey backgrounds:
-
-<p align="center">
-  <img src="docs/journal/sd15-attempt1/compare-row.png" width="720" alt="The same eight prompts, one sample each: the small CPU model above draws clean 木, 山 and 雨; Stable Diffusion 1.5, attempt 1, below draws dense characters on grey vignetted backgrounds">
-</p>
-
-The current attempt (arm 5) follows the fake kanji that started the idea more closely: 10,384 KANJIDIC2 characters instead of 6,413, drawn from a brush font and a bold mincho instead of KanjiVG's hairline strokes. At 1,000 of its 8,000 steps the brush style is already there:
-
-<p align="center">
-  <img src="docs/journal/arm5/step001000.png" width="720" alt="Two rows of brush-style characters on white sampled at 1,000 steps of arm 5, two samples per demo prompt; the prompt water gives the water radical 氵 in both">
-</p>
-
-Arm 9 shows the whole arc the write-up turns on. Retrained to 10,000 steps with a sample every 25 steps, each word starts as Stable Diffusion's photograph of it, becomes a new character built on the word's part around step 5,000, and ends as the dictionary's own kanji:
-
-<p align="center">
-  <img src="docs/assets/arm9-film.gif" width="560" alt="An animation of eight words, Water to Elon Musk, each a photograph at step 0 that turns into a new character around step 5,000 and into a dictionary kanji by 10,000, with the step and a progress bar above">
-</p>
-
-The model invents only while it reads the word and has not yet settled on the dictionary: between 4,000 and 8,000 steps the caption gain climbs from 25% to 80% while the four seeds of a word still differ, and past 8,000 they converge on the same real kanji.
-
-<p align="center">
-  <img src="docs/assets/invention-window.png" width="640" alt="Two charts over training steps 0 to 10,000 with a shaded band from 4,000 to 8,000: caption gain rising to 90% on top, variety between seeds falling to 0.32 below, and three framed glyphs for Ghost: a photograph, an invented kanji, and 鬼">
-</p>
+`docs/figures.py`; `docs/paper_figures.py` draws plainer versions into `docs/paper/`, with the
+sampling trajectory and a guidance sweep (`pip install -e .[figures]`).
 
 ## Install
 
@@ -153,12 +134,10 @@ pip install torch --index-url https://download.pytorch.org/whl/cpu   # or a CUDA
 pip install -e .
 ```
 
-## Pretrained weights
+## Run the small model
 
 The weights after 16,000 steps are in the [v0.2.0 release](https://github.com/yago-mendoza/kanji-diffusion/releases/tag/v0.2.0).
 Unzip `kanji-diffusion-16k.zip` into `runs/` and skip straight to step 4 below.
-
-## Run
 
 ```bash
 # 1. Download KanjiVG and KANJIDIC2, render every character at 64x64 and embed the
@@ -181,22 +160,53 @@ python -m kanji_diffusion.sample runs/small "pizza" "internet" "Elon Musk" -n 4 
 `--guidance` (default 3) trades variety for fidelity to the prompt; `--seed` changes the
 draw. On a GPU, `--preset base` trains a wider denoiser.
 
+## Fine-tune Stable Diffusion (arm 11)
+
+This needs a CUDA GPU; the run below took about 90 minutes on an 80 GB H100. The fine-tuned weights are not released.
+
+```bash
+# 1. enpitsu's training set (Hugging Face epts/kanji-full), 10,358 Mincho glyphs with their
+#    KANJIDIC2 meanings, at 256 px.
+python -m kanji_diffusion.prepare_epts --size 256 --out data/kanji256_epts.pt
+
+# 2. Full U-Net fine-tune of Stable Diffusion 1.5, cross-attention at 1e-4 and the rest at 1e-5,
+#    batch 32, keeping the U-Net of every save so any step can be chosen afterwards.
+python -m kanji_diffusion.finetune_sd --data data/kanji256_epts.pt --eval-data /none --out runs/arm11 \
+  --steps 24000 --lr 1e-5 --lr-xattn 1e-4 --constant --save-every 2000 --save-unets
+
+# 3. 24 samples of each word at guidance 7.5, one PNG each, to pick from.
+python outputs/keep/gallery.py runs/arm11/pipeline runs/arm11/gallery outputs/keep/hardmaru_words.txt --n 24
+```
+
+`python -m kanji_diffusion.diagnose runs/arm11 --data data/kanji256_epts.pt` gives the caption gain: how much
+better the model removes noise with the right caption than with a shuffled one. `--lora R` trains a rank-R LoRA
+instead of the whole U-Net (arm 10). The flags of every other arm are in [`docs/journal.md`](docs/journal.md).
+
 ## Layout
 
 ```
 kanji_diffusion/
-  prepare.py      data: KanjiVG strokes rendered without cairo, KANJIDIC2 meanings, CLIP embeddings
-  text.py         the frozen CLIP text encoder
-  autoencoder.py  GlyphVAE and its training loop
-  model.py        the UNet and the noise schedule
-  train.py        denoiser training with EMA and caption dropout
-  sample.py       generation and labelled sample sheets
-  evaluate.py     nearest-training-glyph check for dictionary and invented words
+  prepare.py       data: KanjiVG strokes rendered without cairo, KANJIDIC2 meanings, CLIP embeddings
+  prepare_font.py  every KANJIDIC2 character drawn from fonts (arm 5)
+  prepare_epts.py  enpitsu's own training set in this repo's format (arms 7 to 11)
+  text.py          the frozen CLIP text encoder
+  autoencoder.py   GlyphVAE and its training loop
+  model.py         the UNet and the noise schedule
+  train.py         denoiser training with EMA and caption dropout
+  sample.py        generation and labelled sample sheets
+  evaluate.py      nearest-training-glyph check for dictionary and invented words
+  design.py        words built from named parts, and whether the design decides the glyph (arm 4)
+  diagnose.py      caption gain: right caption against a shuffled one
+  finetune_sd.py   the Stable Diffusion fine-tune
+  lora.py          LoRA on the attention layers, in plain torch
+outputs/keep/      word lists, gallery and figure scripts of the Stable Diffusion arms
 docs/
-  figures.py      the figures in this README
+  figures.py       the figures of the small model
+  journal.md       every decision of the project, with its cost
 ```
 
 ## Data licences
 
 KanjiVG is © Ulrich Apel, CC BY-SA 3.0. KANJIDIC2 is © the Electronic Dictionary Research
 and Development Group, CC BY-SA 4.0. Neither is redistributed here: `prepare` downloads them.
+enpitsu's training set is downloaded from Hugging Face by `prepare_epts`.
