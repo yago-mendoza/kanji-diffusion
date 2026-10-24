@@ -132,10 +132,16 @@ The current attempt (arm 5) follows the fake kanji that started the idea more cl
   <img src="docs/journal/arm5/step001000.png" width="720" alt="Two rows of brush-style characters on white sampled at 1,000 steps of arm 5, two samples per demo prompt; the prompt water gives the water radical 氵 in both">
 </p>
 
-Arm 9 shows the whole arc the write-up turns on. Each word starts as Stable Diffusion's photograph of it, becomes a new character built on the word's part around step 6,000, and ends as the dictionary's own kanji:
+Arm 9 shows the whole arc the write-up turns on. Retrained to 10,000 steps with a sample every 25 steps, each word starts as Stable Diffusion's photograph of it, becomes a new character built on the word's part around step 5,000, and ends as the dictionary's own kanji:
 
 <p align="center">
-  <img src="docs/assets/arm9-film.gif" width="560" alt="An animation of eight words, Water to Elon Musk, each a photograph at step 0 that turns into a new character around step 6,000 and into a dictionary kanji by 16,000, with the step and caption gain above">
+  <img src="docs/assets/arm9-film.gif" width="560" alt="An animation of eight words, Water to Elon Musk, each a photograph at step 0 that turns into a new character around step 5,000 and into a dictionary kanji by 10,000, with the step and a progress bar above">
+</p>
+
+The model invents only while it reads the word and has not yet settled on the dictionary: between 4,000 and 8,000 steps the caption gain climbs from 25% to 80% while the four seeds of a word still differ, and past 8,000 they converge on the same real kanji.
+
+<p align="center">
+  <img src="docs/assets/invention-window.png" width="640" alt="Two charts over training steps 0 to 10,000 with a shaded band from 4,000 to 8,000: caption gain rising to 90% on top, variety between seeds falling to 0.32 below, and three framed glyphs for Ghost: a photograph, an invented kanji, and 鬼">
 </p>
 
 ## Install
