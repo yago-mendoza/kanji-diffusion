@@ -105,10 +105,10 @@ draws the family the meaning belongs to (魚 plus a second part for *fish*, 雨 
   <img src="docs/known.png" width="720" alt="Samples for twelve dictionary words, each above the most similar real character in grey: tree, mountain and woman come back as 木, 山 and 女">
 </p>
 
-The same prompts and seed during training, at 500, 1,000, 2,000, 4,000, 10,000 and 16,000 steps:
+The same prompts and seed during training, one frame every 500 steps from 500 to 16,000:
 
 <p align="center">
-  <img src="docs/progress.png" width="720" alt="The same eight prompts and seed after 500, 1,000, 2,000, 4,000, 10,000 and 16,000 training steps, from blurred strokes to clean characters">
+  <img src="docs/assets/progress.gif" width="560" alt="An animation of eight labelled prompts, tree to pizza, sharpening from dotted strokes into finished characters as the step counter climbs to 16,000">
 </p>
 
 `python -m kanji_diffusion.evaluate runs/small` measures how close each sample comes to its
@@ -118,9 +118,9 @@ at the 99th percentile. None of the 96 samples goes past that 99th percentile, s
 draws new characters rather than returning ones it was shown. The figures are produced by
 `docs/figures.py`.
 
-## Second arm: Stable Diffusion 1.5, in progress
+## Second arm: Stable Diffusion 1.5
 
-The write-up asks what changes when the model starts from one that has seen the world. That arm fine-tunes Stable Diffusion 1.5 on a rented GPU, and it is still running; [`docs/journal.md`](docs/journal.md) logs every attempt and decision. The first fine-tune drew busier, darker glyphs than the small model, on grey backgrounds:
+The write-up asks what changes when the model starts from one that has seen the world. That arm fine-tunes Stable Diffusion 1.5 on rented GPUs, over a dozen runs that [`docs/journal.md`](docs/journal.md) logs one decision at a time. The first fine-tune drew busier, darker glyphs than the small model, on grey backgrounds:
 
 <p align="center">
   <img src="docs/journal/sd15-attempt1/compare-row.png" width="720" alt="The same eight prompts, one sample each: the small CPU model above draws clean 木, 山 and 雨; Stable Diffusion 1.5, attempt 1, below draws dense characters on grey vignetted backgrounds">
@@ -130,6 +130,12 @@ The current attempt (arm 5) follows the fake kanji that started the idea more cl
 
 <p align="center">
   <img src="docs/journal/arm5/step001000.png" width="720" alt="Two rows of brush-style characters on white sampled at 1,000 steps of arm 5, two samples per demo prompt; the prompt water gives the water radical 氵 in both">
+</p>
+
+Arm 9 shows the whole arc the write-up turns on. Each word starts as Stable Diffusion's photograph of it, becomes a new character built on the word's part around step 6,000, and ends as the dictionary's own kanji:
+
+<p align="center">
+  <img src="docs/assets/arm9-film.gif" width="560" alt="An animation of eight words, Water to Elon Musk, each a photograph at step 0 that turns into a new character around step 6,000 and into a dictionary kanji by 16,000, with the step and caption gain above">
 </p>
 
 ## Install
