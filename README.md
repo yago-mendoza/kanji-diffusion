@@ -26,7 +26,7 @@
 Ask it for *internet* and it draws a character under 門, the gate, with something of its own inside; ask for *algorithm* and it builds one on 糸, the thread. Neither character exists. The model has only ever seen real kanji, yet it has learned which component carries which meaning well enough to put together new ones. This README covers running it; the [write-up on infraphysics.net](https://infraphysics.net/lab/projects/kanji-diffusion) explains why each part is the size it is and measures the results against the training set, and a companion piece tells how the second arm was trained on [an A100 rented on RunPod from Claude Code](https://infraphysics.net/blog/bits2bricks/renting-a-gpu-on-runpod).
 
 <p align="center">
-  <img src="docs/invented.png" width="720" alt="Three samples each for eight English words that have no kanji (pizza, internet, computer, Elon Musk, smartphone, coffee, algorithm, cryptocurrency), drawn black on white by the small model: internet comes out under the gate radical 門, algorithm on the thread radical 糸">
+  <img src="docs/invented.png" width="460" alt="Three samples each for eight English words that have no kanji (pizza, internet, computer, Elon Musk, smartphone, coffee, algorithm, cryptocurrency), drawn black on white by the small model: internet comes out under the gate radical 門, algorithm on the thread radical 糸">
 </p>
 
 ## Where the idea comes from
@@ -95,14 +95,14 @@ meaning (the gate 門 for *internet*, the thread 糸 for *algorithm*) and builds
 characters with them:
 
 <p align="center">
-  <img src="docs/novel.png" width="720" alt="Four samples for each of twelve invented words, each sample above the most similar real training character in grey with its similarity, between 0.35 and 0.73">
+  <img src="docs/novel.png" width="560" alt="Two samples for each of twelve invented words, each sample above the most similar real training character in grey with its similarity, between 0.35 and 0.73">
 </p>
 
 Words that do have a kanji. Simple characters come back (木, 山, 女); for others the model
 draws the family the meaning belongs to (魚 plus a second part for *fish*, 雨 on top for *rain*):
 
 <p align="center">
-  <img src="docs/known.png" width="720" alt="Samples for twelve dictionary words, each above the most similar real character in grey: tree, mountain and woman come back as 木, 山 and 女">
+  <img src="docs/known.png" width="560" alt="Samples for twelve dictionary words, each above the most similar real character in grey: tree, mountain and woman come back as 木, 山 and 女">
 </p>
 
 The same prompts and seed during training, one frame every 500 steps from 500 to 16,000:

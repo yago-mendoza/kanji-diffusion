@@ -22,8 +22,10 @@ OUT = ROOT / "docs"
 BG, INK, LABEL, DIM = (255, 255, 255), (20, 20, 20), (60, 60, 60), (120, 120, 120)
 
 
-def font(size: int, cjk: bool = False):
-    for name in (("YuGothM.ttc", "msgothic.ttc", "NotoSansCJK-Regular.ttc") if cjk else (str(Path(__file__).with_name("DejaVuSerif.ttf")), "georgia.ttf")):
+def font(size: int, cjk: bool = False, bold: bool = False):
+    names = ("YuGothM.ttc", "msgothic.ttc", "NotoSansCJK-Regular.ttc") if cjk else (
+        ("seguisb.ttf", "DejaVuSans-Bold.ttf") if bold else (str(Path(__file__).with_name("DejaVuSerif.ttf")), "georgia.ttf"))
+    for name in names:
         try:
             return ImageFont.truetype(name, size)
         except OSError:
@@ -38,33 +40,58 @@ def tile(a: np.ndarray, size: int, ink=INK) -> Image.Image:
     return Image.fromarray(rgb.clip(0, 255).astype(np.uint8))
 
 
-def grid(cells, cols: list[str], rows: list[str] | None, path: Path, size: int = 128, gap: int = 10,
+def grid(cells, cols: list[str], rows: list[str] | None, path: Path, size: int = 128, gap: int = 16,
          under: list[list[str]] | None = None, inks=None) -> Path:
-    """cells[r][c] uint8 glyphs. Column labels on top, row labels on the left, optional captions under each."""
-    pad, head = 28, 30
-    left = 0 if rows is None else 118
-    cap = 0 if under is None else 26
+    """cells[r][c] uint8 glyphs. Column labels on top, row labels on the left, optional captions under each.
+    The model's glyphs (drawn in INK) sit in a black frame; real training glyphs (any other ink) stay bare."""
+    pad, head = 28, 52
+    left = 0 if rows is None else 150
+    cap = 0 if under is None else 34
     w = pad * 2 + left + len(cols) * size + (len(cols) - 1) * gap
     h = pad * 2 + head + len(cells) * (size + cap) + (len(cells) - 1) * gap
     im = Image.new("RGB", (w, h), BG)
     d = ImageDraw.Draw(im)
-    f, fc = font(15), font(15, cjk=True)
+    f, fc = font(24, bold=True), font(22, cjk=True)
     for c, name in enumerate(cols):
         x = pad + left + c * (size + gap)
-        fs = 15
-        while fs > 9 and d.textlength(name, font=font(fs)) > size + gap - 4:
+        fs = 24
+        while fs > 14 and d.textlength(name, font=font(fs, bold=True)) > size + gap - 4:
             fs -= 1
-        d.text((x + size / 2, pad + 8), name, fill=LABEL, font=font(fs), anchor="mm")
+        d.text((x + size / 2, pad + 14), name, fill=INK, font=font(fs, bold=True), anchor="mm")
     for r, row in enumerate(cells):
         y = pad + head + r * (size + cap + gap)
         if rows is not None:
-            d.text((pad, y + size / 2), rows[r], fill=LABEL, font=f, anchor="lm")
+            d.text((pad, y + size / 2), rows[r], fill=INK, font=f, anchor="lm")
         for c, a in enumerate(row):
             x = pad + left + c * (size + gap)
-            im.paste(tile(a, size, inks[r][c] if inks else INK), (x, y))
+            ink = inks[r][c] if inks else INK
+            if ink == INK:
+                inset = round(size * 0.065)
+                im.paste(tile(a, size - 2 * inset, ink), (x + inset, y + inset))
+                d.rectangle([x, y, x + size - 1, y + size - 1], outline=(16, 16, 16), width=max(2, size // 50))
+            else:
+                im.paste(tile(a, size, ink), (x, y))
             if under is not None:
-                d.text((x + size / 2, y + size + 13), under[r][c], fill=DIM, font=fc, anchor="mm")
+                d.text((x + size / 2, y + size + 17), under[r][c], fill=LABEL, font=fc, anchor="mm")
     path.parent.mkdir(parents=True, exist_ok=True)
+    im.save(path)
+    print(path)
+    return path
+
+
+def bands(cells, cols, path: Path, per: int = 6, under=None, inks=None, **kw) -> Path:
+    """A wide grid cut into bands of `per` columns stacked one under the other, so the labels stay readable on a page."""
+    parts = []
+    for i in range(0, len(cols), per):
+        sl = slice(i, i + per)
+        tmp = path.with_name(f"_{path.stem}_{i}.png")
+        grid([r[sl] for r in cells], cols[sl], None, tmp, under=[u[sl] for u in under] if under else None,
+             inks=[k[sl] for k in inks] if inks else None, **kw)
+        parts.append(Image.open(tmp).copy()); tmp.unlink()
+    im = Image.new("RGB", (max(p.width for p in parts), sum(p.height for p in parts)), BG)
+    y = 0
+    for p in parts:
+        im.paste(p, (0, y)); y += p.height
     im.save(path)
     print(path)
     return path
@@ -107,7 +134,7 @@ def sheet(run: Path) -> None:
     for name, prompts in sets.items():
         g = generate(unet, vae, prompts, n=3, text_model=cfg["text_model"], seed=1)
         cells = [[g[i * 3 + j] for i in range(len(prompts))] for j in range(3)]
-        grid(cells, prompts, None, OUT / f"{name}.png", size=120)
+        bands(cells, prompts, OUT / f"{name}.png", size=150)
 
 
 def pairs(run: Path, n: int = 4) -> None:
@@ -122,12 +149,12 @@ def pairs(run: Path, n: int = 4) -> None:
         g = generate(unet, vae, prompts, n=n, text_model=cfg["text_model"])
         best, idx = similarity(masks(g), real_m).max(dim=1)
         cells, under, inks = [], [], []
-        for j in range(n):
+        for j in range(2):  # four drawn per word, the first two shown (a taller figure stops being read)
             ks = [i * n + j for i in range(len(prompts))]
             cells += [[g[k] for k in ks], [real[idx[k]] for k in ks]]
             under += [[""] * len(ks), [f"{chars[idx[k]]} {best[k]:.2f}" for k in ks]]
             inks += [[INK] * len(ks), [DIM] * len(ks)]
-        grid(cells, prompts, None, OUT / f"{name}.png", size=96, under=under, inks=inks)
+        bands(cells, prompts, OUT / f"{name}.png", size=128, under=under, inks=inks)
 
 
 COVER_WORDS = ["pizza", "internet", "computer", "robot", "Elon Musk", "democracy", "airplane", "smartphone",
