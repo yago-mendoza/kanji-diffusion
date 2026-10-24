@@ -137,8 +137,48 @@ def sheet(run: Path) -> None:
         bands(cells, prompts, OUT / f"{name}.png", size=150)
 
 
+def pair_plate(words, ours, real, labels, path: Path, cols: int = 4, size: int = 128) -> Path:
+    """One block per word: its name in Georgia above, our sample framed, the nearest training glyph bare in grey
+    beside it with that character and the ink overlap under it. Blocks run in `cols` columns, so the plate is wide."""
+    S = 2  # supersample
+    size, gap, pad, head, under, cg, rg = size * S, 14 * S, 34 * S, 46 * S, 46 * S, 58 * S, 22 * S
+    fn = ImageFont.truetype("georgia.ttf", 27 * S)
+    fc = font(27 * S, cjk=True)
+    bw = 2 * size + gap
+    rows = (len(words) + cols - 1) // cols
+    W = 2 * pad + cols * bw + (cols - 1) * cg
+    H = 2 * pad + rows * (head + size + under) + (rows - 1) * rg
+    im = Image.new("RGB", (W, H), BG)
+    d = ImageDraw.Draw(im)
+    for i, w in enumerate(words):
+        x = pad + (i % cols) * (bw + cg)
+        y = pad + (i // cols) * (head + size + under + rg)
+        f = ImageFont.truetype("georgia.ttf", 31 * S)
+        while d.textlength(w, font=f) > bw:
+            f = ImageFont.truetype("georgia.ttf", f.size - S)
+        d.text((x, y + head - 14 * S), w, fill=INK, font=f, anchor="ls")
+        y += head
+        inset = round(size * 0.065)
+        im.paste(tile(ours[i], size - 2 * inset, INK), (x + inset, y + inset))
+        d.rectangle([x, y, x + size - 1, y + size - 1], outline=(16, 16, 16), width=3 * S)
+        xr = x + size + gap
+        im.paste(tile(real[i], size, DIM), (xr, y))
+        ch, num = labels[i]
+        tw = d.textlength(ch, font=fc) + 8 * S + d.textlength(num, font=fn)
+        x0 = xr + (size - tw) / 2
+        yb = y + size + under * 0.58
+        d.text((x0, yb), ch, fill=DIM, font=fc, anchor="lm")
+        d.text((x0 + d.textlength(ch, font=fc) + 8 * S, yb), num, fill=DIM, font=fn, anchor="lm")
+    im = im.resize((W // S, H // S), Image.LANCZOS)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    im.save(path)
+    print(path, im.size)
+    return path
+
+
 def pairs(run: Path, n: int = 4) -> None:
-    """Each sample above the most similar of the 6,413 training glyphs (dimmed), as the evaluation measures it."""
+    """Each word's first sample beside the most similar of the 6,413 training glyphs (dimmed), as the evaluation
+    measures it: ink overlap (IoU of the thickened ink masks), 0 to 1."""
     from kanji_diffusion.evaluate import KNOWN, NOVEL, masks, similarity
     from kanji_diffusion.sample import generate, load_run
     unet, vae, cfg = load_run(run)
@@ -148,13 +188,9 @@ def pairs(run: Path, n: int = 4) -> None:
     for name, prompts in (("known", list(KNOWN)), ("novel", NOVEL)):
         g = generate(unet, vae, prompts, n=n, text_model=cfg["text_model"])
         best, idx = similarity(masks(g), real_m).max(dim=1)
-        cells, under, inks = [], [], []
-        for j in range(2):  # four drawn per word, the first two shown (a taller figure stops being read)
-            ks = [i * n + j for i in range(len(prompts))]
-            cells += [[g[k] for k in ks], [real[idx[k]] for k in ks]]
-            under += [[""] * len(ks), [f"{chars[idx[k]]} {best[k]:.2f}" for k in ks]]
-            inks += [[INK] * len(ks), [DIM] * len(ks)]
-        bands(cells, prompts, OUT / f"{name}.png", size=128, under=under, inks=inks)
+        ks = [i * n for i in range(len(prompts))]  # four drawn per word, the first shown
+        pair_plate(prompts, [g[k] for k in ks], [real[idx[k]] for k in ks],
+                   [(chars[idx[k]], f"{best[k]:.2f}") for k in ks], OUT / f"{name}.png")
 
 
 COVER_WORDS = ["pizza", "internet", "computer", "robot", "Elon Musk", "democracy", "airplane", "smartphone",

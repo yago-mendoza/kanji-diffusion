@@ -95,14 +95,14 @@ meaning (the gate 門 for *internet*, the thread 糸 for *algorithm*) and builds
 characters with them:
 
 <p align="center">
-  <img src="docs/novel.png" width="560" alt="Two samples for each of twelve invented words, each sample above the most similar real training character in grey with its similarity, between 0.35 and 0.73">
+  <img src="docs/novel.png" width="560" alt="One sample for each of twelve invented words, framed, beside the most similar real training character in grey with its ink overlap, between 0.35 and 0.64">
 </p>
 
 Words that do have a kanji. Simple characters come back (木, 山, 女); for others the model
 draws the family the meaning belongs to (魚 plus a second part for *fish*, 雨 on top for *rain*):
 
 <p align="center">
-  <img src="docs/known.png" width="560" alt="Samples for twelve dictionary words, each above the most similar real character in grey: tree, mountain and woman come back as 木, 山 and 女">
+  <img src="docs/known.png" width="560" alt="One sample for each of twelve dictionary words, framed, beside the most similar real character in grey: tree, mountain and woman come back as 木, 山 and 女">
 </p>
 
 The same prompts and seed during training, one frame every 500 steps from 500 to 16,000:
