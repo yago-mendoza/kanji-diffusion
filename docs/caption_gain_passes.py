@@ -17,7 +17,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-RUNS = Path(r"C:/Users/yagom/dev/stable_diffusion_kanji_generator/runs")
+RUNS = Path(r"C:/Users/yagom/dev/InfraPhysics/Projects/stable_diffusion_kanji_generator/runs")
 HERE = Path(__file__).resolve().parent
 BATCH, FULL, JOYO, TEST = 32, 10358, 1937, 256
 INK, GREY, LIGHT, HAIR, BAND = "#121212", "#69655f", "#a9a39a", "#d6d1c8", "#efe9df"
